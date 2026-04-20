@@ -262,7 +262,7 @@ export default function AzaBot() {
   return (
     <>
       {/* Floating launcher */}
-      <div className="fixed bottom-5 left-5 z-50 flex items-center gap-3">
+      <div className="fixed bottom-5 right-5 z-50 flex flex-row-reverse items-center gap-3">
         <button
           onClick={() => setOpen((o) => !o)}
           className="w-14 h-14 rounded-full bg-gradient-header text-primary-foreground shadow-chat flex items-center justify-center hover:scale-105 transition-smooth relative"
@@ -289,7 +289,7 @@ export default function AzaBot() {
 
       {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-24 left-5 z-50 w-[calc(100vw-2.5rem)] max-w-md h-[640px] max-h-[calc(100vh-7rem)] bg-card rounded-3xl shadow-chat overflow-hidden flex flex-col border border-border animate-fade-in-up">
+        <div className="fixed bottom-24 right-5 z-50 w-[calc(100vw-2.5rem)] max-w-md h-[640px] max-h-[calc(100vh-7rem)] bg-card rounded-3xl shadow-chat overflow-hidden flex flex-col border border-border animate-fade-in-up">
         {/* Header */}
         <header className="bg-gradient-header text-primary-foreground px-5 py-4 flex items-center justify-between">
           <button
