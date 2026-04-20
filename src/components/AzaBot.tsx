@@ -277,7 +277,7 @@ export default function AzaBot() {
                 <span>عزبوت</span>
               </div>
               <div className="text-xs text-primary-foreground/70 flex items-center gap-1.5 justify-end">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
                 المساعد الذكي - متصل الآن
               </div>
             </div>
