@@ -480,8 +480,9 @@ export default function AzaBot() {
             مدعوم بالذكاء الاصطناعي • قد يخطئ أحياناً
           </p>
         </footer>
-      </div>
-    </div>
+        </div>
+      )}
+    </>
   );
 }
 
