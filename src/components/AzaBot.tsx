@@ -15,6 +15,7 @@ import {
   Bot,
   RefreshCw,
   ChevronDown,
+  MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
