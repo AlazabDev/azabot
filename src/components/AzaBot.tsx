@@ -56,6 +56,7 @@ const formatBytes = (b: number) => {
 const uid = () => Math.random().toString(36).slice(2);
 
 export default function AzaBot() {
+  const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"text" | "voice">("text");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
