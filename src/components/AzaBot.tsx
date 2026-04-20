@@ -15,6 +15,7 @@ import {
   Bot,
   RefreshCw,
   ChevronDown,
+  MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -55,6 +56,7 @@ const formatBytes = (b: number) => {
 const uid = () => Math.random().toString(36).slice(2);
 
 export default function AzaBot() {
+  const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"text" | "voice">("text");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -258,15 +260,43 @@ export default function AzaBot() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-muted/40 to-background flex items-center justify-center p-4">
-      <div className="w-full max-w-md h-[640px] bg-card rounded-3xl shadow-chat overflow-hidden flex flex-col border border-border">
+    <>
+      {/* Floating launcher */}
+      <div className="fixed bottom-5 left-5 z-50 flex items-center gap-3">
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className="w-14 h-14 rounded-full bg-gradient-header text-primary-foreground shadow-chat flex items-center justify-center hover:scale-105 transition-smooth relative"
+          aria-label={open ? "إغلاق المحادثة" : "فتح المحادثة"}
+        >
+          {open ? (
+            <X className="w-6 h-6" />
+          ) : (
+            <>
+              <div className="w-10 h-10 rounded-full bg-brand flex items-center justify-center">
+                <img src={azabotLogo} alt="AzaBot" className="w-7 h-7" />
+              </div>
+              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-brand border-2 border-background animate-pulse" />
+            </>
+          )}
+        </button>
+        {!open && (
+          <div className="bg-card border border-border rounded-full px-4 py-2 shadow-bubble text-sm font-medium text-foreground hidden sm:flex items-center gap-2 animate-fade-in-up">
+            <span className="text-brand">👋</span>
+            <span>تحتاج مساعدة؟</span>
+          </div>
+        )}
+      </div>
+
+      {/* Chat panel */}
+      {open && (
+        <div className="fixed bottom-24 left-5 z-50 w-[calc(100vw-2.5rem)] max-w-md h-[640px] max-h-[calc(100vh-7rem)] bg-card rounded-3xl shadow-chat overflow-hidden flex flex-col border border-border animate-fade-in-up">
         {/* Header */}
         <header className="bg-gradient-header text-primary-foreground px-5 py-4 flex items-center justify-between">
           <button
-            onClick={clearChat}
+            onClick={() => setOpen(false)}
             className="text-primary-foreground/70 hover:text-primary-foreground transition-smooth"
             aria-label="إغلاق"
-            title="مسح المحادثة"
+            title="إغلاق"
           >
             <X className="w-5 h-5" />
           </button>
@@ -450,8 +480,9 @@ export default function AzaBot() {
             مدعوم بالذكاء الاصطناعي • قد يخطئ أحياناً
           </p>
         </footer>
-      </div>
-    </div>
+        </div>
+      )}
+    </>
   );
 }
 
