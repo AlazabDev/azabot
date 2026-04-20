@@ -293,10 +293,10 @@ export default function AzaBot() {
         {/* Header */}
         <header className="bg-gradient-header text-primary-foreground px-5 py-4 flex items-center justify-between">
           <button
-            onClick={clearChat}
+            onClick={() => setOpen(false)}
             className="text-primary-foreground/70 hover:text-primary-foreground transition-smooth"
             aria-label="إغلاق"
-            title="مسح المحادثة"
+            title="إغلاق"
           >
             <X className="w-5 h-5" />
           </button>
