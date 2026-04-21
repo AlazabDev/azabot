@@ -407,7 +407,7 @@ export default function AzaBot() {
           {tab === "voice" ? (
             <VoiceView isSpeaking={isSpeaking} onStart={startVoiceInput} streaming={streaming} />
           ) : messages.length === 0 ? (
-            <Welcome onPick={(t) => send(t)} />
+            <Welcome onPick={(t) => send(t)} cfg={cfg} />
           ) : (
             <div className="space-y-3">
               {messages.map((m) => (
@@ -545,18 +545,18 @@ function TabButton({ active, onClick, icon, label }: { active: boolean; onClick:
   );
 }
 
-function Welcome({ onPick }: { onPick: (t: string) => void }) {
+function Welcome({ onPick, cfg }: { onPick: (t: string) => void; cfg: BotConfig }) {
   return (
     <div className="flex flex-col items-center text-center pt-4 animate-fade-in-up">
       <div className="w-14 h-14 rounded-2xl bg-brand/15 flex items-center justify-center mb-3">
         <MessageSquare className="w-7 h-7 text-brand" />
       </div>
       <h2 className="font-bold text-lg text-foreground">
-        مرحباً! أنا عزبوت <span>👋</span>
+        {cfg.welcome_message}
       </h2>
-      <p className="text-sm text-muted-foreground mt-1 mb-4">كيف يمكنني مساعدتك؟</p>
+      <p className="text-sm text-muted-foreground mt-1 mb-4">اختر سؤالاً للبدء</p>
       <div className="grid grid-cols-2 gap-2 w-full">
-        {QUICK_ACTIONS.map((q) => (
+        {cfg.quick_replies.map((q) => (
           <button
             key={q}
             onClick={() => onPick(q)}
