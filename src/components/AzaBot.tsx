@@ -34,13 +34,6 @@ type Msg = {
   ts: number;
 };
 
-const QUICK_ACTIONS = [
-  "ما هي خدمات الشركة؟",
-  "أريد عرض سعر تشطيب",
-  "ما هي أسعار التشطيب؟",
-  "ما هي فروع الشركة؟",
-];
-
 const VOICES = [
   { id: "default", label: "الصوت الأساسي", desc: "عربي • ذكر • شاب", lang: "ar-SA" },
   { id: "sarah", label: "سارة", desc: "أمريكي • أنثى • شابة", lang: "en-US" },
@@ -55,6 +48,34 @@ const formatBytes = (b: number) => {
 
 const uid = () => Math.random().toString(36).slice(2);
 
+type BotConfig = {
+  bot_name: string;
+  primary_color: string;
+  welcome_message: string;
+  quick_replies: string[];
+  position: "left" | "right";
+  auto_speak: boolean;
+};
+
+const DEFAULT_CFG: BotConfig = {
+  bot_name: "AzaBot",
+  primary_color: "#FFB800",
+  welcome_message: "مرحباً! كيف يمكنني مساعدتك؟",
+  quick_replies: ["ما هي خدماتكم؟", "كيف أتواصل معكم؟", "أريد عرض سعر"],
+  position: "right",
+  auto_speak: false,
+};
+
+const SESSION_KEY = "azabot_session_id";
+function getSessionId(): string {
+  let id = localStorage.getItem(SESSION_KEY);
+  if (!id) {
+    id = `s_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+    localStorage.setItem(SESSION_KEY, id);
+  }
+  return id;
+}
+
 export default function AzaBot() {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"text" | "voice">("text");
@@ -67,9 +88,32 @@ export default function AzaBot() {
   const [voice, setVoice] = useState(VOICES[0]);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceOpen, setVoiceOpen] = useState(false);
+  const [cfg, setCfg] = useState<BotConfig>(DEFAULT_CFG);
+  const sessionIdRef = useRef<string>(getSessionId());
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bot-public-settings`, {
+      headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d && !d.error) {
+          setCfg({
+            bot_name: d.bot_name || DEFAULT_CFG.bot_name,
+            primary_color: d.primary_color || DEFAULT_CFG.primary_color,
+            welcome_message: d.welcome_message || DEFAULT_CFG.welcome_message,
+            quick_replies: Array.isArray(d.quick_replies) ? d.quick_replies : DEFAULT_CFG.quick_replies,
+            position: d.position === "left" ? "left" : "right",
+            auto_speak: !!d.auto_speak,
+          });
+          if (d.auto_speak !== undefined) setTtsEnabled(!!d.voice_enabled);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -150,7 +194,7 @@ export default function AzaBot() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: aiMessages }),
+        body: JSON.stringify({ messages: aiMessages, session_id: sessionIdRef.current }),
       });
 
       if (resp.status === 429) {
@@ -363,7 +407,7 @@ export default function AzaBot() {
           {tab === "voice" ? (
             <VoiceView isSpeaking={isSpeaking} onStart={startVoiceInput} streaming={streaming} />
           ) : messages.length === 0 ? (
-            <Welcome onPick={(t) => send(t)} />
+            <Welcome onPick={(t) => send(t)} cfg={cfg} />
           ) : (
             <div className="space-y-3">
               {messages.map((m) => (
@@ -501,18 +545,18 @@ function TabButton({ active, onClick, icon, label }: { active: boolean; onClick:
   );
 }
 
-function Welcome({ onPick }: { onPick: (t: string) => void }) {
+function Welcome({ onPick, cfg }: { onPick: (t: string) => void; cfg: BotConfig }) {
   return (
     <div className="flex flex-col items-center text-center pt-4 animate-fade-in-up">
       <div className="w-14 h-14 rounded-2xl bg-brand/15 flex items-center justify-center mb-3">
         <MessageSquare className="w-7 h-7 text-brand" />
       </div>
       <h2 className="font-bold text-lg text-foreground">
-        مرحباً! أنا عزبوت <span>👋</span>
+        {cfg.welcome_message}
       </h2>
-      <p className="text-sm text-muted-foreground mt-1 mb-4">كيف يمكنني مساعدتك؟</p>
+      <p className="text-sm text-muted-foreground mt-1 mb-4">اختر سؤالاً للبدء</p>
       <div className="grid grid-cols-2 gap-2 w-full">
-        {QUICK_ACTIONS.map((q) => (
+        {cfg.quick_replies.map((q) => (
           <button
             key={q}
             onClick={() => onPick(q)}
