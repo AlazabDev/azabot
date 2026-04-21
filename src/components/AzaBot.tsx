@@ -34,13 +34,6 @@ type Msg = {
   ts: number;
 };
 
-const QUICK_ACTIONS = [
-  "ما هي خدمات الشركة؟",
-  "أريد عرض سعر تشطيب",
-  "ما هي أسعار التشطيب؟",
-  "ما هي فروع الشركة؟",
-];
-
 const VOICES = [
   { id: "default", label: "الصوت الأساسي", desc: "عربي • ذكر • شاب", lang: "ar-SA" },
   { id: "sarah", label: "سارة", desc: "أمريكي • أنثى • شابة", lang: "en-US" },
@@ -55,6 +48,34 @@ const formatBytes = (b: number) => {
 
 const uid = () => Math.random().toString(36).slice(2);
 
+type BotConfig = {
+  bot_name: string;
+  primary_color: string;
+  welcome_message: string;
+  quick_replies: string[];
+  position: "left" | "right";
+  auto_speak: boolean;
+};
+
+const DEFAULT_CFG: BotConfig = {
+  bot_name: "AzaBot",
+  primary_color: "#FFB800",
+  welcome_message: "مرحباً! كيف يمكنني مساعدتك؟",
+  quick_replies: ["ما هي خدماتكم؟", "كيف أتواصل معكم؟", "أريد عرض سعر"],
+  position: "right",
+  auto_speak: false,
+};
+
+const SESSION_KEY = "azabot_session_id";
+function getSessionId(): string {
+  let id = localStorage.getItem(SESSION_KEY);
+  if (!id) {
+    id = `s_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+    localStorage.setItem(SESSION_KEY, id);
+  }
+  return id;
+}
+
 export default function AzaBot() {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"text" | "voice">("text");
@@ -67,9 +88,32 @@ export default function AzaBot() {
   const [voice, setVoice] = useState(VOICES[0]);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceOpen, setVoiceOpen] = useState(false);
+  const [cfg, setCfg] = useState<BotConfig>(DEFAULT_CFG);
+  const sessionIdRef = useRef<string>(getSessionId());
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bot-public-settings`, {
+      headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d && !d.error) {
+          setCfg({
+            bot_name: d.bot_name || DEFAULT_CFG.bot_name,
+            primary_color: d.primary_color || DEFAULT_CFG.primary_color,
+            welcome_message: d.welcome_message || DEFAULT_CFG.welcome_message,
+            quick_replies: Array.isArray(d.quick_replies) ? d.quick_replies : DEFAULT_CFG.quick_replies,
+            position: d.position === "left" ? "left" : "right",
+            auto_speak: !!d.auto_speak,
+          });
+          if (d.auto_speak !== undefined) setTtsEnabled(!!d.voice_enabled);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -150,7 +194,7 @@ export default function AzaBot() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: aiMessages }),
+        body: JSON.stringify({ messages: aiMessages, session_id: sessionIdRef.current }),
       });
 
       if (resp.status === 429) {
