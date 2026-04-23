@@ -1,0 +1,75 @@
+version: "3.9"
+
+# ════════════════════════════════════════════════════════════
+#  AzaBot — chat.alazab.com
+#  الاستخدام: docker compose up -d
+# ════════════════════════════════════════════════════════════
+
+services:
+
+  # ── Nginx reverse proxy ──────────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: azabot_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/chat.alazab.com.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./static:/var/www/azabot:ro
+      - certbot_certs:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - certbot
+    networks:
+      - azabot_net
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── Certbot — Let's Encrypt SSL ──────────────────────────
+  certbot:
+    image: certbot/certbot:latest
+    container_name: azabot_certbot
+    restart: unless-stopped
+    volumes:
+      - certbot_certs:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    entrypoint: >
+      /bin/sh -c "
+        trap exit TERM;
+        while :; do
+          certbot renew --webroot -w /var/www/certbot --quiet 2>&1;
+          sleep 12h & wait $${!};
+        done
+      "
+    networks:
+      - azabot_net
+
+  # ── Watchtower — تحديث تلقائي للصور ─────────────────────
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: azabot_watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      WATCHTOWER_POLL_INTERVAL: 86400
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_NOTIFICATIONS: "slack"
+    networks:
+      - azabot_net
+
+volumes:
+  certbot_certs:
+  certbot_www:
+  nginx_logs:
+
+networks:
+  azabot_net:
+    driver: bridge

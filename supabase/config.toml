@@ -1,13 +1,13 @@
-project_id = "daraqtdmiwdszczwticd"
+project_id = "fjojyzvulhvqeitnaenv"
 
 [functions.chat]
 verify_jwt = false
 
-[functions.admin-login]
+[functions.chat-v2]
 verify_jwt = false
 
-[functions.admin-api]
+[functions.elevenlabs-stt]
 verify_jwt = false
 
-[functions.bot-public-settings]
+[functions.elevenlabs-tts]
 verify_jwt = false
