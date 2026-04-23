@@ -1,5 +1,5 @@
 import { MessageSquare } from "lucide-react";
-import { useSite } from "@/context/SiteContext";
+import { useSite } from "@/context/useSite";
 
 interface WelcomeScreenProps {
   onPickQuestion: (q: string) => void;

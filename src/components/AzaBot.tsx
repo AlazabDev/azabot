@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { useChat } from "@/hooks/useChat";
 import { useTTS } from "@/hooks/useTTS";
 import { uid } from "@/lib/chat-service";
-import { useSite } from "@/context/SiteContext";
+import { useSite } from "@/context/useSite";
 
 import { ChatHeader } from "./chat/ChatHeader";
 import { MessageBubble } from "./chat/MessageBubble";

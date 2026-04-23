@@ -4,7 +4,7 @@
  * أضفه في أي موقع بسطر واحد:
  *
  * <script src="https://chat.alazab.com/embed/azabot-embed.js"
- *         data-api="https://daraqtdmiwdszczwticd.supabase.co/functions/v1/chat-v2"
+ *         data-api="https://fjojyzvulhvqeitnaenv.supabase.co/functions/v1/chat-v2"
  *         data-key="SUPABASE_ANON_KEY"
  *         data-site="luxury-finishing">
  * </script>

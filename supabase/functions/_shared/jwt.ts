@@ -4,7 +4,7 @@ const dec = new TextDecoder();
 
 function b64url(bytes: Uint8Array | string): string {
   const b = typeof bytes === "string" ? enc.encode(bytes) : bytes;
-  let str = btoa(String.fromCharCode(...b));
+  const str = btoa(String.fromCharCode(...b));
   return str.replace(/=+$/, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
@@ -33,7 +33,7 @@ export async function signJWT(payload: Record<string, unknown>, secret: string, 
   return `${headerB64}.${payloadB64}.${b64url(sig)}`;
 }
 
-export async function verifyJWT(token: string, secret: string): Promise<Record<string, any> | null> {
+export async function verifyJWT(token: string, secret: string): Promise<Record<string, unknown> | null> {
   try {
     const [h, p, s] = token.split(".");
     if (!h || !p || !s) return null;

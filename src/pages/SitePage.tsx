@@ -10,7 +10,7 @@
  */
 
 import { useEffect } from "react";
-import { useSite } from "@/context/SiteContext";
+import { useSite } from "@/context/useSite";
 import AzaBot from "@/components/AzaBot";
 
 export default function SitePage() {

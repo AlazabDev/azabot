@@ -1,6 +1,15 @@
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
 
+interface Integration {
+  id: string;
+  type: "webhook" | "telegram" | "whatsapp" | "twilio" | string;
+  name: string;
+  enabled: boolean;
+  events: string[];
+  config: Record<string, string>;
+}
+
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -41,7 +50,7 @@ Deno.serve(async (req) => {
 
     // Persist conversation + last user message (fire-and-forget)
     let conversationId: string | null = null;
-    const lastUser = [...messages].reverse().find((m: any) => m.role === "user");
+    const lastUser = [...messages].reverse().find((m: { role: string; content: string }) => m.role === "user");
     if (session_id) {
       try {
         const { data: existing } = await supabase
@@ -128,7 +137,7 @@ async function captureAssistantReply(
         const json = JSON.parse(data);
         const delta = json.choices?.[0]?.delta?.content;
         if (delta) full += delta;
-      } catch {}
+      } catch (_e) { /* skip malformed SSE JSON chunk */ }
     }
   }
   if (full && conversationId) {
@@ -138,11 +147,11 @@ async function captureAssistantReply(
     dispatchAll("message.created", {
       conversation_id: conversationId, session_id: sessionId,
       role: "assistant", content: full,
-    }).catch(() => {});
+    }).catch((_e) => { /* fire-and-forget — errors intentionally swallowed */ });
   }
 }
 
-async function dispatchAll(event: string, payload: any) {
+async function dispatchAll(event: string, payload: Record<string, unknown>) {
   const { data: integs } = await supabase.from("integrations")
     .select("*").eq("enabled", true);
   if (!integs?.length) return;
@@ -152,7 +161,7 @@ async function dispatchAll(event: string, payload: any) {
   }
 }
 
-async function fireOne(integ: any, event: string, payload: any) {
+async function fireOne(integ: Integration, event: string, payload: Record<string, unknown>) {
   let status = "failed", statusCode = 0, responseBody = "", errorMessage = "";
   try {
     if (integ.type === "webhook") {
@@ -210,7 +219,7 @@ async function fireOne(integ: any, event: string, payload: any) {
   });
 }
 
-function formatForChat(event: string, p: any): string {
+function formatForChat(event: string, p: Record<string, unknown>): string {
   if (event === "conversation.started") return `🆕 <b>محادثة جديدة AzaBot</b>\nالجلسة: <code>${p.session_id}</code>`;
   if (event === "message.created") {
     const role = p.role === "user" ? "👤 الزائر" : "🤖 البوت";

@@ -6,19 +6,12 @@
  * ─────────────────────────────────────────────────────────
  */
 
-import { createContext, useContext, useMemo } from "react";
+import { useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { resolveSiteConfig, SITE_CONFIGS } from "@/config/sites";
-import type { SiteConfig } from "@/config/sites";
 import { CONFIG } from "@/lib/config";
-
-interface SiteContextValue {
-  site: SiteConfig;
-  /** هل هذا الموقع الرئيسي (alazab)؟ */
-  isRoot: boolean;
-}
-
-const SiteContext = createContext<SiteContextValue | null>(null);
+import { SiteContext } from "./SiteContextDef";
+import type { SiteContextValue } from "./SiteContextDef";
 
 export function SiteProvider({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -43,10 +36,4 @@ export function SiteProvider({ children }: { children: React.ReactNode }) {
   }, [location.pathname]);
 
   return <SiteContext.Provider value={value}>{children}</SiteContext.Provider>;
-}
-
-export function useSite(): SiteContextValue {
-  const ctx = useContext(SiteContext);
-  if (!ctx) throw new Error("useSite must be used inside <SiteProvider>");
-  return ctx;
 }

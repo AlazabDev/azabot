@@ -2,6 +2,15 @@ import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
 import { verifyJWT } from "../_shared/jwt.ts";
 
+interface Integration {
+  id: string;
+  type: "webhook" | "telegram" | "whatsapp" | "twilio" | string;
+  name: string;
+  enabled: boolean;
+  events: string[];
+  config: Record<string, string>;
+}
+
 const SECRET = Deno.env.get("ADMIN_JWT_SECRET")!;
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -126,7 +135,7 @@ Deno.serve(async (req) => {
   }
 });
 
-async function dispatchEvent(integ: any, event: string, payload: any) {
+async function dispatchEvent(integ: Integration, event: string, payload: Record<string, unknown>) {
   const startedAt = Date.now();
   let status = "failed", statusCode = 0, responseBody = "", errorMessage = "";
   try {
@@ -198,7 +207,7 @@ async function dispatchEvent(integ: any, event: string, payload: any) {
   return { status, statusCode, errorMessage, responseBody, durationMs: Date.now() - startedAt };
 }
 
-function formatForChat(event: string, p: any): string {
+function formatForChat(event: string, p: Record<string, unknown>): string {
   if (event === "test.event") return `🧪 <b>اختبار AzaBot</b>\n${p.message}`;
   if (event === "conversation.started") {
     return `🆕 <b>محادثة جديدة</b>\nالجلسة: <code>${p.session_id}</code>`;

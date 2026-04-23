@@ -9,7 +9,7 @@ import { X, RefreshCw, LayoutGrid } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import azabotLogo from "@/assets/azabot-logo.png";
 import { NAV_ITEMS } from "@/types/chat";
-import { useSite } from "@/context/SiteContext";
+import { useSite } from "@/context/useSite";
 
 interface ChatHeaderProps {
   onClose: () => void;
