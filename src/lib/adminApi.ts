@@ -1,6 +1,8 @@
 const TOKEN_KEY = "azabot_admin_token";
-const BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
-const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const API_ORIGIN = (
+  (import.meta.env.VITE_CHAT_API_URL as string | undefined) ||
+  window.location.origin
+).replace(/\/$/, "");
 
 export const adminToken = {
   get: () => localStorage.getItem(TOKEN_KEY),
@@ -8,25 +10,27 @@ export const adminToken = {
   clear: () => localStorage.removeItem(TOKEN_KEY),
 };
 
-export async function adminLogin(password: string, action?: "setup") {
-  const res = await fetch(`${BASE}/admin-login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${ANON}` },
-    body: JSON.stringify({ password, action }),
+export async function adminLogin(password: string) {
+  const res = await fetch(`${API_ORIGIN}/admin/stats`, {
+    method: "GET",
+    headers: { "X-Admin-Token": password },
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "فشل الدخول");
-  adminToken.set(data.token);
+  if (!res.ok) throw new Error(data.detail || data.error || "فشل الدخول");
+  adminToken.set(password);
   return data;
 }
 
-export async function adminApi(action: string, opts: { method?: string; body?: any; query?: Record<string, string> } = {}) {
+export async function adminApi<T = unknown>(
+  action: string,
+  opts: { method?: string; body?: unknown; query?: Record<string, string> } = {},
+): Promise<T> {
   const t = adminToken.get();
   if (!t) throw new Error("Not authenticated");
   const qs = new URLSearchParams({ action, ...(opts.query || {}) }).toString();
-  const res = await fetch(`${BASE}/admin-api?${qs}`, {
+  const res = await fetch(`${API_ORIGIN}/admin/api?${qs}`, {
     method: opts.method || "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` },
+    headers: { "Content-Type": "application/json", "X-Admin-Token": t },
     body: opts.method === "GET" ? undefined : JSON.stringify(opts.body || {}),
   });
   const data = await res.json();
@@ -34,6 +38,6 @@ export async function adminApi(action: string, opts: { method?: string; body?: a
     adminToken.clear();
     window.location.href = "/admin/login";
   }
-  if (!res.ok) throw new Error(data.error || "خطأ");
-  return data;
+  if (!res.ok) throw new Error(data.detail || data.error || "خطأ");
+  return data as T;
 }

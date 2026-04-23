@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import { adminApi } from "@/lib/adminApi";
 import { Card } from "@/components/ui/card";
 import { MessageSquare, Users, Calendar } from "lucide-react";
+import { AdminStats } from "@/types/admin";
 
 export default function StatsTab() {
-  const [stats, setStats] = useState<{ conversations: number; messages: number; today: number } | null>(null);
+  const [stats, setStats] = useState<AdminStats | null>(null);
 
   useEffect(() => {
-    adminApi("stats", { method: "GET" }).then(setStats).catch(() => {});
+    adminApi<AdminStats>("stats", { method: "GET" }).then(setStats).catch(() => {});
   }, []);
 
   const items = [

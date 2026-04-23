@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { adminApi } from "@/lib/adminApi";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,21 +6,25 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Search, Trash2, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
+import { ConversationDetail, ConversationMessage, ConversationSummary, errorMessage } from "@/types/admin";
 
 export default function ConversationsTab() {
-  const [list, setList] = useState<any[]>([]);
+  const [list, setList] = useState<ConversationSummary[]>([]);
   const [q, setQ] = useState("");
-  const [selected, setSelected] = useState<any | null>(null);
-  const [msgs, setMsgs] = useState<any[]>([]);
+  const [selected, setSelected] = useState<ConversationSummary | null>(null);
+  const [msgs, setMsgs] = useState<ConversationMessage[]>([]);
 
-  const load = () => adminApi("list_conversations", { method: "GET", query: q ? { q } : {} })
-    .then(setList).catch((e) => toast.error(e.message));
+  const load = useCallback(() => {
+    adminApi<ConversationSummary[]>("list_conversations", { method: "GET", query: q ? { q } : {} })
+      .then(setList)
+      .catch((e: unknown) => toast.error(errorMessage(e)));
+  }, [q]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [load]);
 
-  const open = async (c: any) => {
+  const open = async (c: ConversationSummary) => {
     setSelected(c);
-    const r = await adminApi("get_conversation", { method: "GET", query: { id: c.id } });
+    const r = await adminApi<ConversationDetail>("get_conversation", { method: "GET", query: { id: c.id } });
     setMsgs(r.messages || []);
   };
 

@@ -1,15 +1,12 @@
 /**
  * AzaBot — Chat Service
- * طبقة خدمة موحدة للتواصل مع Supabase Edge Functions
- * - stream chat (SSE)
- * - text-to-speech (ElevenLabs)
- * - speech-to-text (ElevenLabs Whisper)
+ * طبقة خدمة موحدة للتواصل مع FastAPI/Rasa.
  */
 
-import { CONFIG, getAuthHeaders } from "./config";
+import { CONFIG } from "./config";
 import type { ApiMessage } from "@/types/chat";
 
-// ─── Stream Chat ────────────────────────────────────────────
+let currentAudio: HTMLAudioElement | null = null;
 
 interface StreamChatOptions {
   messages: ApiMessage[];
@@ -29,17 +26,25 @@ export async function streamChat({
   signal,
 }: StreamChatOptions): Promise<void> {
   let resp: Response;
+  const lastUserMessage = [...messages].reverse().find((m) => m.role === "user")?.content?.trim();
+  if (!lastUserMessage) {
+    onDone();
+    return;
+  }
+
   try {
     resp = await fetch(CONFIG.api.chat, {
       method: "POST",
       headers: {
-        ...getAuthHeaders(),
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        messages: messages.slice(-CONFIG.chat.maxContextMessages),
-        siteId: siteId ?? CONFIG.siteId,
-        origin: window.location.origin,
+        sender_id: getSenderId(),
+        message: lastUserMessage,
+        channel: "website",
+        site_host: window.location.hostname,
+        site_path: window.location.pathname || "/",
+        brand: siteId ?? CONFIG.siteId,
       }),
       signal,
     });
@@ -49,91 +54,34 @@ export async function streamChat({
     return;
   }
 
-  if (resp.status === 429) {
-    onError("تم تجاوز الحد المسموح. انتظر لحظة ثم حاول مرة أخرى.");
-    return;
-  }
-  if (resp.status === 402) {
-    onError("الخدمة غير متاحة حالياً.");
-    return;
-  }
-  if (!resp.ok || !resp.body) {
+  if (!resp.ok) {
     onError(`خطأ في الخادم (${resp.status}). حاول مرة أخرى.`);
     return;
   }
 
-  const reader = resp.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-
   try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-
-      let newlineIdx: number;
-      while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
-        let line = buffer.slice(0, newlineIdx);
-        buffer = buffer.slice(newlineIdx + 1);
-        if (line.endsWith("\r")) line = line.slice(0, -1);
-        if (!line.startsWith("data: ")) continue;
-
-        const json = line.slice(6).trim();
-        if (json === "[DONE]") {
-          onDone();
-          return;
-        }
-
-        try {
-          const parsed = JSON.parse(json);
-          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-          if (content) onDelta(content);
-        } catch {
-          // إعادة المحاولة للسطر الناقص
-          buffer = line + "\n" + buffer;
-          break;
-        }
-      }
-    }
-  } finally {
-    reader.releaseLock();
+    const data = await resp.json();
+    const text = normalizeResponses(data.responses);
+    if (text) onDelta(text);
+  } catch {
+    onError("تعذّر قراءة رد الخادم.");
+    return;
   }
 
   onDone();
 }
 
-// ─── Text-to-Speech (ElevenLabs) ───────────────────────────
-
-export async function textToSpeech(text: string): Promise<string> {
-  const response = await fetch(CONFIG.api.tts, {
-    method: "POST",
-    headers: {
-      ...getAuthHeaders(),
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ text }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`TTS failed: ${response.status}`);
-  }
-
-  const blob = await response.blob();
-  return URL.createObjectURL(blob);
-}
-
-// ─── Speech-to-Text (ElevenLabs Whisper) ───────────────────
-
 export async function speechToText(audioBlob: Blob): Promise<string> {
-  const formData = new FormData();
-  formData.append("audio", audioBlob, "recording.webm");
+  const form = new FormData();
+  form.append("sender_id", getSenderId());
+  form.append("channel", "website");
+  form.append("site_host", window.location.hostname);
+  form.append("site_path", window.location.pathname || "/");
+  form.append("file", audioBlob, "recording.webm");
 
-  const response = await fetch(CONFIG.api.stt, {
+  const response = await fetch(CONFIG.api.audio, {
     method: "POST",
-    headers: getAuthHeaders(),
-    body: formData,
+    body: form,
   });
 
   if (!response.ok) {
@@ -141,10 +89,137 @@ export async function speechToText(audioBlob: Blob): Promise<string> {
   }
 
   const data = await response.json();
-  return (data.text as string) || "";
+  return (data.transcript as string | undefined) || "";
+}
+
+interface UploadChatFileOptions {
+  file: File;
+  message?: string;
+  siteId?: string;
+  onDelta: (text: string) => void;
+  onDone: () => void;
+  onError: (msg: string) => void;
+  signal?: AbortSignal;
+}
+
+export async function uploadChatFile({
+  file,
+  message,
+  siteId,
+  onDelta,
+  onDone,
+  onError,
+  signal,
+}: UploadChatFileOptions): Promise<void> {
+  const form = new FormData();
+  form.append("sender_id", getSenderId());
+  form.append("channel", "website");
+  form.append("site_host", window.location.hostname);
+  form.append("site_path", window.location.pathname || "/");
+  form.append("file", file);
+  if (message?.trim()) form.append("message", message.trim());
+  if (siteId ?? CONFIG.siteId) form.append("brand", siteId ?? CONFIG.siteId ?? "");
+
+  let response: Response;
+  try {
+    response = await fetch(CONFIG.api.upload, {
+      method: "POST",
+      body: form,
+      signal,
+    });
+  } catch (err) {
+    if ((err as Error).name === "AbortError") return;
+    onError("تعذّر رفع الملف للخادم.");
+    return;
+  }
+
+  if (!response.ok) {
+    onError(`فشل رفع الملف (${response.status}). حاول مرة أخرى.`);
+    return;
+  }
+
+  try {
+    const data = await response.json();
+    const text = normalizeResponses(data.responses);
+    if (text) onDelta(text);
+  } catch {
+    onError("تعذّر قراءة رد الخادم بعد رفع الملف.");
+    return;
+  }
+
+  onDone();
+}
+
+export async function speakInBrowser(text: string, lang = "ar-SA"): Promise<void> {
+  const cleanText = stripMarkdown(text);
+  try {
+    await playServerTTS(cleanText);
+    return;
+  } catch {
+    // Fallback to browser voices when server-side TTS is unavailable.
+  }
+
+  return new Promise((resolve, reject) => {
+    if (!("speechSynthesis" in window)) {
+      reject(new Error("Speech synthesis is not supported"));
+      return;
+    }
+    stopSpeechPlayback();
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = lang;
+    utterance.rate = 0.95;
+    utterance.onend = () => resolve();
+    utterance.onerror = () => reject(new Error("Speech synthesis failed"));
+    window.speechSynthesis.speak(utterance);
+  });
+}
+
+export function stopSpeechPlayback(): void {
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.src = "";
+    currentAudio = null;
+  }
+  window.speechSynthesis?.cancel();
 }
 
 // ─── Helpers ────────────────────────────────────────────────
+
+async function playServerTTS(text: string): Promise<void> {
+  if (!text) return;
+  const response = await fetch(CONFIG.api.tts, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+  if (!response.ok) {
+    throw new Error(`TTS failed: ${response.status}`);
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  stopSpeechPlayback();
+  const audio = new Audio(url);
+  currentAudio = audio;
+
+  await new Promise<void>((resolve, reject) => {
+    audio.onended = () => {
+      URL.revokeObjectURL(url);
+      currentAudio = null;
+      resolve();
+    };
+    audio.onerror = () => {
+      URL.revokeObjectURL(url);
+      currentAudio = null;
+      reject(new Error("Server TTS playback failed"));
+    };
+    audio.play().catch((error) => {
+      URL.revokeObjectURL(url);
+      currentAudio = null;
+      reject(error);
+    });
+  });
+}
 
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -154,6 +229,38 @@ export function formatBytes(bytes: number): string {
 
 export function uid(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function getSenderId(): string {
+  const key = "azabot_sender_id";
+  const existing = localStorage.getItem(key);
+  if (existing) return existing;
+  const value = `web_${uid()}`;
+  localStorage.setItem(key, value);
+  return value;
+}
+
+function normalizeResponses(responses: unknown): string {
+  if (!Array.isArray(responses)) return "";
+  return responses
+    .map((item) => {
+      if (!item || typeof item !== "object") return "";
+      const text = (item as { text?: unknown }).text;
+      return typeof text === "string" ? text.trim() : "";
+    })
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/#{1,6}\s/g, "")
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/\*(.+?)\*/g, "$1")
+    .replace(/`(.+?)`/g, "$1")
+    .replace(/\[(.+?)\]\(.+?\)/g, "$1")
+    .replace(/^\s*[-*+]\s/gm, "")
+    .trim();
 }
 
 export function downloadChat(messages: Array<{ role: string; content: string; ts: number }>): void {

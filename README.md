@@ -1,149 +1,73 @@
-# AzaBot — المساعد الذكي متعدد المواقع
+# AzaBot Production Frontend
 
-بوت دردشة ذكي مبني على React + Vite + Supabase Edge Functions، يدعم المحادثة النصية والصوتية، وقابل للتضمين في أي موقع.
+واجهة React/Vite النهائية لمشروع `alazab-rasa`.
 
----
+هذه الواجهة لا تتصل بـ Supabase. مسار التشغيل الحالي:
 
-## ⚡ البدء السريع
-
-```bash
-# 1. تثبيت الاعتماديات
-npm install
-
-# 2. نسخ ملف المتغيرات
-cp .env.example .env.local
-# عدّل القيم في .env.local
-
-# 3. تشغيل محلي
-npm run dev
+```text
+Browser -> FastAPI webhook server -> Rasa -> Actions
 ```
 
----
+## التشغيل
 
-## 🏗️ البنية
-
-```
-azabot/
-├── src/
-│   ├── components/
-│   │   ├── AzaBot.tsx          ← المكوّن الرئيسي
-│   │   └── chat/               ← مكوّنات الدردشة
-│   │       ├── ChatHeader.tsx
-│   │       ├── ChatInput.tsx
-│   │       ├── MessageBubble.tsx
-│   │       ├── VoiceView.tsx
-│   │       ├── VoiceSelector.tsx
-│   │       ├── WelcomeScreen.tsx
-│   │       └── TypingDots.tsx
-│   ├── hooks/
-│   │   ├── useChat.ts          ← منطق المحادثة
-│   │   └── useTTS.ts           ← Text-to-Speech
-│   ├── lib/
-│   │   ├── config.ts           ← إعدادات مركزية
-│   │   └── chat-service.ts     ← API calls
-│   └── types/
-│       └── chat.ts             ← TypeScript types
-├── supabase/functions/
-│   ├── chat-v2/                ← Edge Function (AI + multi-site)
-│   ├── elevenlabs-tts/         ← Text-to-Speech
-│   └── elevenlabs-stt/         ← Speech-to-Text
-├── embed/
-│   └── azabot-embed.js         ← Embed script للمواقع الخارجية
-└── deploy/
-    ├── docker-compose.yml
-    ├── deploy.sh
-    └── nginx/
+```powershell
+pnpm install
+pnpm build
 ```
 
----
+بعد البناء يخدم السيرفر الرئيسي الملفات من:
 
-## 🚀 النشر للإنتاج
-
-### 1. Build
-
-```bash
-npm run build
+```text
+azabot-prod/dist
 ```
 
-### 2. نشر Edge Functions
+والروابط تكون:
 
-```bash
-# تثبيت Supabase CLI
-npm install -g supabase
-
-# تسجيل الدخول
-supabase login
-
-# ربط المشروع
-supabase link --project-ref daraqtdmiwdszczwticd
-
-# نشر الـ Functions
-supabase functions deploy chat-v2
-supabase functions deploy elevenlabs-tts
-supabase functions deploy elevenlabs-stt
-
-# تعيين الأسرار
-supabase secrets set CLAUDE_API=sk-ant-api03-...
-supabase secrets set ELEVENLABS_API_KEY=sk_...
+```text
+http://127.0.0.1:8000/
+http://127.0.0.1:8000/brand-identity
+http://127.0.0.1:8000/luxury-finishing
+http://127.0.0.1:8000/uberfix
+http://127.0.0.1:8000/laban-alasfour
 ```
 
-### 3. نشر على الخادم
+## الربط مع الباك إند
 
-```bash
-cd deploy
-chmod +x deploy.sh
-sudo ./deploy.sh
+افتراضياً تستخدم الواجهة نفس أصل الموقع الحالي:
+
+```text
+/chat
+/chat/audio
+/chat/upload
 ```
 
----
+للتطوير فقط يمكن ضبط:
 
-## 🔌 التضمين في مواقع خارجية
-
-```html
-<script
-  src="https://chat.alazab.com/embed/azabot-embed.js"
-  data-api="https://daraqtdmiwdszczwticd.supabase.co/functions/v1/chat-v2"
-  data-key="SUPABASE_ANON_KEY"
-  data-site="luxury-finishing"
-></script>
+```env
+VITE_CHAT_API_URL=http://127.0.0.1:8000
+VITE_SITE_ID=
 ```
 
-### المواقع المدعومة (`data-site`)
+في الإنتاج اترك `VITE_CHAT_API_URL` فارغاً حتى تستخدم الواجهة نفس الدومين.
 
-| المعرّف | الموقع |
-|---------|--------|
-| `luxury-finishing` | الأعزب للتشطيبات الفاخرة |
-| `brand-identity` | الأعزب للهوية البصرية |
-| `uberfix` | UberFix للصيانة |
-| `laban-alasfour` | ألبان العصفور |
-| `alazab` | مجموعة الأعزب (افتراضي) |
+## الملفات المهمة
 
----
+- `src/components/AzaBot.tsx`: مكوّن البوت الرئيسي.
+- `src/hooks/useChat.ts`: منطق المحادثة.
+- `src/lib/chat-service.ts`: الاتصال بـ FastAPI/Rasa.
+- `src/lib/config.ts`: إعدادات endpoint.
+- `dist/`: build الإنتاج الذي يخدمه FastAPI.
+- `embed/azabot-embed.js`: سكربت تضمين اختياري للمواقع الخارجية.
 
-## 🛠️ أوامر مفيدة
+## أوامر الفحص
 
-```bash
-npm run dev           # تشغيل محلي
-npm run build         # build إنتاج
-npm run lint          # فحص الكود
-npm run type-check    # فحص TypeScript
-npm run test          # اختبارات
+```powershell
+pnpm build
+pnpm test
 ```
 
----
+فحص الأمان الخاص بالواجهة:
 
-## 🔐 الأمان
-
-- **المفاتيح السرية** (CLAUDE_API, ELEVENLABS_API_KEY) تبقى في Supabase Edge Function Secrets فقط — لا تُضاف لـ `.env` الـ frontend
-- **VITE_** prefixed variables فقط هي التي تُرفع للـ browser
-- Rate limiting مفعّل على مستوى Edge Function + Nginx
-- CORS محدود بالنطاقات المسموحة
-
----
-
-## 📋 المتطلبات
-
-- Node.js ≥ 20
-- Supabase account + project
-- (اختياري) ElevenLabs API key للصوت
-- (للنشر) Ubuntu 22+ مع Docker
+```powershell
+snyk test --file=azabot-prod/package.json --package-manager=pnpm --org=0e5901a4-9487-4488-a23d-8849b619354b
+```

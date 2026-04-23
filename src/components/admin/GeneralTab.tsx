@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2, Save } from "lucide-react";
+import { AdminSettings, errorMessage } from "@/types/admin";
 
 const MODELS = [
   { id: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash (سريع ومتوازن)" },
@@ -19,23 +20,27 @@ const MODELS = [
 ];
 
 export default function GeneralTab() {
-  const [s, setS] = useState<any>(null);
+  const [s, setS] = useState<AdminSettings | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    adminApi("get_settings", { method: "GET" }).then(setS).catch((e) => toast.error(e.message));
+    adminApi<AdminSettings>("get_settings", { method: "GET" })
+      .then(setS)
+      .catch((e: unknown) => toast.error(errorMessage(e)));
   }, []);
 
-  const upd = (k: string, v: any) => setS((p: any) => ({ ...p, [k]: v }));
+  const upd = <K extends keyof AdminSettings>(k: K, v: AdminSettings[K]) => {
+    setS((p) => (p ? { ...p, [k]: v } : p));
+  };
 
   const save = async () => {
     setSaving(true);
     try {
-      const updated = await adminApi("update_settings", { body: s });
+      const updated = await adminApi<AdminSettings>("update_settings", { body: s });
       setS(updated);
       toast.success("تم الحفظ");
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e));
     } finally {
       setSaving(false);
     }
@@ -61,7 +66,7 @@ export default function GeneralTab() {
           </div>
           <div>
             <Label>موضع الزر العائم</Label>
-            <Select value={s.position} onValueChange={(v) => upd("position", v)}>
+            <Select value={s.position} onValueChange={(v) => upd("position", v as AdminSettings["position"])}>
               <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="right">يمين</SelectItem>

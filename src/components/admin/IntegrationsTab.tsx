@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Plus, Trash2, TestTube, Webhook, Send, MessageCircle, Phone } from "lucide-react";
+import { AdminIntegration, errorMessage } from "@/types/admin";
 
 const TYPES = [
   { id: "webhook", label: "Webhook عام", icon: Webhook, desc: "أرسل لأي URL — يعمل مع n8n/Make/Zapier" },
@@ -23,11 +24,13 @@ const EVENTS = [
 ];
 
 export default function IntegrationsTab() {
-  const [list, setList] = useState<any[]>([]);
-  const [editing, setEditing] = useState<any | null>(null);
+  const [list, setList] = useState<AdminIntegration[]>([]);
+  const [editing, setEditing] = useState<AdminIntegration | null>(null);
   const [open, setOpen] = useState(false);
 
-  const load = () => adminApi("list_integrations", { method: "GET" }).then(setList).catch((e) => toast.error(e.message));
+  const load = () => adminApi<AdminIntegration[]>("list_integrations", { method: "GET" })
+    .then(setList)
+    .catch((e: unknown) => toast.error(errorMessage(e)));
   useEffect(() => { load(); }, []);
 
   const startNew = (type: string) => {
@@ -35,14 +38,14 @@ export default function IntegrationsTab() {
     setOpen(true);
   };
 
-  const startEdit = (it: any) => { setEditing({ ...it }); setOpen(true); };
+  const startEdit = (it: AdminIntegration) => { setEditing({ ...it }); setOpen(true); };
 
   const save = async () => {
     try {
       await adminApi("save_integration", { body: editing });
       toast.success("تم الحفظ");
       setOpen(false); setEditing(null); load();
-    } catch (e: any) { toast.error(e.message); }
+    } catch (e: unknown) { toast.error(errorMessage(e)); }
   };
 
   const del = async (id: string) => {
@@ -54,11 +57,11 @@ export default function IntegrationsTab() {
   const test = async (id: string) => {
     toast.loading("جارٍ الاختبار...", { id: "test" });
     try {
-      const r = await adminApi("test_integration", { body: { id } });
+      const r = await adminApi<{ status: string; statusCode?: number; errorMessage?: string }>("test_integration", { body: { id } });
       toast.dismiss("test");
       if (r.status === "success") toast.success(`نجح الاختبار (${r.statusCode})`);
       else toast.error(`فشل: ${r.errorMessage || r.statusCode}`);
-    } catch (e: any) { toast.dismiss("test"); toast.error(e.message); }
+    } catch (e: unknown) { toast.dismiss("test"); toast.error(errorMessage(e)); }
   };
 
   return (
@@ -98,9 +101,9 @@ export default function IntegrationsTab() {
                   <Switch checked={it.enabled} onCheckedChange={async (v) => {
                     await adminApi("save_integration", { body: { ...it, enabled: v } }); load();
                   }} />
-                  <Button size="icon" variant="ghost" onClick={() => test(it.id)} title="اختبار"><TestTube className="w-4 h-4" /></Button>
+                  <Button size="icon" variant="ghost" onClick={() => it.id && test(it.id)} disabled={!it.id} title="اختبار"><TestTube className="w-4 h-4" /></Button>
                   <Button size="icon" variant="ghost" onClick={() => startEdit(it)}>تعديل</Button>
-                  <Button size="icon" variant="ghost" onClick={() => del(it.id)} className="text-destructive"><Trash2 className="w-4 h-4" /></Button>
+                  <Button size="icon" variant="ghost" onClick={() => it.id && del(it.id)} disabled={!it.id} className="text-destructive"><Trash2 className="w-4 h-4" /></Button>
                 </div>
               );
             })}
@@ -217,7 +220,8 @@ export default function IntegrationsTab() {
                       <input type="checkbox" checked={(editing.events || []).includes(ev.id)}
                         onChange={(e) => {
                           const cur = new Set(editing.events || []);
-                          e.target.checked ? cur.add(ev.id) : cur.delete(ev.id);
+                          if (e.target.checked) cur.add(ev.id);
+                          else cur.delete(ev.id);
                           setEditing({ ...editing, events: [...cur] });
                         }} />
                       <span className="text-sm">{ev.label}</span>

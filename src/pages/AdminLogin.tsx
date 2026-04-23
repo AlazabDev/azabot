@@ -7,13 +7,12 @@ import { adminLogin, adminToken } from "@/lib/adminApi";
 import { toast } from "sonner";
 import azabotLogo from "@/assets/azabot-logo.png";
 import { Loader2, Lock } from "lucide-react";
+import { errorMessage } from "@/types/admin";
 
 export default function AdminLogin() {
   const nav = useNavigate();
   const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
-  const [setup, setSetup] = useState(false);
 
   useEffect(() => {
     if (adminToken.get()) nav("/admin", { replace: true });
@@ -21,21 +20,17 @@ export default function AdminLogin() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (setup && password !== confirm) {
-      toast.error("كلمتا المرور غير متطابقتين");
-      return;
-    }
-    if (password.length < 6) {
-      toast.error("كلمة المرور قصيرة جداً (6 على الأقل)");
+    if (!password.trim()) {
+      toast.error("أدخل مفتاح الإدارة");
       return;
     }
     setLoading(true);
     try {
-      await adminLogin(password, setup ? "setup" : undefined);
+      await adminLogin(password);
       toast.success("تم الدخول");
       nav("/admin", { replace: true });
-    } catch (e: any) {
-      toast.error(e.message || "فشل الدخول");
+    } catch (e: unknown) {
+      toast.error(errorMessage(e, "فشل الدخول"));
     } finally {
       setLoading(false);
     }
@@ -50,7 +45,7 @@ export default function AdminLogin() {
           </div>
           <h1 className="text-2xl font-bold text-foreground">لوحة تحكم AzaBot</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {setup ? "أنشئ كلمة المرور لأول مرة" : "أدخل كلمة المرور للدخول"}
+            أدخل قيمة ADMIN_API_KEY للدخول
           </p>
         </div>
 
@@ -70,29 +65,9 @@ export default function AdminLogin() {
               />
             </div>
           </div>
-          {setup && (
-            <div>
-              <Label htmlFor="cfm">تأكيد كلمة المرور</Label>
-              <Input
-                id="cfm"
-                type="password"
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                className="mt-1.5"
-                required
-              />
-            </div>
-          )}
           <Button type="submit" disabled={loading} className="w-full bg-brand hover:bg-brand-glow text-brand-foreground">
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : setup ? "إنشاء وتسجيل الدخول" : "دخول"}
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "دخول"}
           </Button>
-          <button
-            type="button"
-            onClick={() => setSetup((s) => !s)}
-            className="w-full text-xs text-muted-foreground hover:text-brand transition-smooth"
-          >
-            {setup ? "عودة لتسجيل الدخول" : "أول مرة؟ أنشئ كلمة المرور"}
-          </button>
         </form>
       </div>
     </div>

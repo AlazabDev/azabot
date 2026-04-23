@@ -5,7 +5,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Mic, Square, Trash2, Volume2, Loader2 } from "lucide-react";
-import { speechToText, textToSpeech } from "@/lib/chat-service";
+import { speechToText, speakInBrowser, stopSpeechPlayback } from "@/lib/chat-service";
 import { toast } from "sonner";
 import type { Message } from "@/types/chat";
 
@@ -115,14 +115,10 @@ export function VoiceView({ messages, streaming, onSendText }: VoiceViewProps) {
     if (!lastBot || playingTTS) return;
     setPlayingTTS(true);
     try {
-      const url = await textToSpeech(lastBot.content);
-      const audio = new Audio(url);
-      audioRef.current = audio;
-      audio.onended = () => { setPlayingTTS(false); URL.revokeObjectURL(url); };
-      audio.onerror = () => { setPlayingTTS(false); URL.revokeObjectURL(url); };
-      await audio.play();
+      await speakInBrowser(lastBot.content);
     } catch {
       toast.error("فشل تشغيل الصوت.");
+    } finally {
       setPlayingTTS(false);
     }
   }, [lastBot, playingTTS]);
@@ -130,6 +126,7 @@ export function VoiceView({ messages, streaming, onSendText }: VoiceViewProps) {
   const stopTTS = useCallback(() => {
     audioRef.current?.pause();
     audioRef.current = null;
+    stopSpeechPlayback();
     setPlayingTTS(false);
   }, []);
 

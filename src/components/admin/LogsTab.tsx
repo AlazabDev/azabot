@@ -5,10 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { IntegrationLog, errorMessage } from "@/types/admin";
 
 export default function LogsTab() {
-  const [list, setList] = useState<any[]>([]);
-  const load = () => adminApi("list_logs", { method: "GET" }).then(setList).catch((e) => toast.error(e.message));
+  const [list, setList] = useState<IntegrationLog[]>([]);
+  const load = () => adminApi<IntegrationLog[]>("list_logs", { method: "GET" })
+    .then(setList)
+    .catch((e: unknown) => toast.error(errorMessage(e)));
   useEffect(() => { load(); }, []);
 
   return (
