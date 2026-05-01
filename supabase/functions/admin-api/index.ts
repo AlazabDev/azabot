@@ -50,6 +50,9 @@ Deno.serve(async (req) => {
           "bot_name", "primary_color", "welcome_message", "quick_replies", "ai_model",
           "system_prompt", "voice_enabled", "voice_name", "auto_speak",
           "business_hours_enabled", "business_hours", "offline_message", "position",
+          "engine", "rasa_url", "rasa_timeout_ms",
+          "header_subtitle", "bubble_style", "show_branding", "sound_enabled",
+          "allow_human_takeover", "avatar_url",
         ];
         const patch: Record<string, unknown> = {};
         for (const k of allowed) if (k in body) patch[k] = body[k];
