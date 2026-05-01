@@ -21,12 +21,11 @@ Deno.serve(async (req) => {
   try {
     const { messages, session_id } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
 
-    // Load bot settings
     const { data: settings } = await supabase
       .from("bot_settings").select("*").eq("id", 1).single();
 
+    const engine = settings?.engine || "lovable";
     const model = settings?.ai_model || "google/gemini-2.5-flash";
     const systemContent = settings?.system_prompt ||
       "أنت AzaBot، مساعد ذكي ودود يتحدث بالعربية الفصحى السهلة افتراضياً.";
@@ -41,25 +40,24 @@ Deno.serve(async (req) => {
       const inHours = time >= (bh.start || "00:00") && time <= (bh.end || "23:59");
       if (!inDays || !inHours) {
         const offline = settings.offline_message || "نحن خارج ساعات العمل.";
-        return new Response(
-          `data: ${JSON.stringify({ choices: [{ delta: { content: offline } }] })}\n\ndata: [DONE]\n\n`,
-          { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } },
-        );
+        return sseStatic(offline);
       }
     }
 
-    // Persist conversation + last user message (fire-and-forget)
+    // Persist conversation + last user message
     let conversationId: string | null = null;
+    let humanTakeover = false;
     const lastUser = [...messages].reverse().find((m: { role: string; content: string }) => m.role === "user");
     if (session_id) {
       try {
         const { data: existing } = await supabase
-          .from("conversations").select("id").eq("session_id", session_id).maybeSingle();
+          .from("conversations").select("id, human_takeover").eq("session_id", session_id).maybeSingle();
         if (existing) {
           conversationId = existing.id;
+          humanTakeover = !!existing.human_takeover;
         } else {
           const { data: created } = await supabase
-            .from("conversations").insert({ session_id, metadata: {} }).select("id").single();
+            .from("conversations").insert({ session_id, metadata: {} }).select("id, human_takeover").single();
           conversationId = created?.id || null;
           if (conversationId) await dispatchAll("conversation.started", { session_id, conversation_id: conversationId });
         }
@@ -74,6 +72,52 @@ Deno.serve(async (req) => {
         }
       } catch (e) { console.error("persist error:", e); }
     }
+
+    // If human took over → don't auto-reply
+    if (humanTakeover) {
+      return sseStatic("⏳ تم تحويل المحادثة لموظف بشري. سيرد عليك في أقرب وقت.");
+    }
+
+    // ─── Engine: RASA ──────────────────────────────────────
+    if (engine === "rasa") {
+      const rasaUrl = String(settings?.rasa_url || "").trim();
+      if (!rasaUrl) return sseStatic("⚠️ لم يتم ضبط رابط سيرفر Rasa من لوحة الإدارة.");
+      try {
+        const target = rasaUrl.replace(/\/$/, "") + "/webhooks/rest/webhook";
+        const timeout = Number(settings?.rasa_timeout_ms || 15000);
+        const res = await fetch(target, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sender: session_id || "anonymous", message: lastUser?.content || "" }),
+          signal: AbortSignal.timeout(timeout),
+        });
+        if (!res.ok) {
+          const errTxt = await res.text();
+          console.error("Rasa error:", res.status, errTxt);
+          return sseStatic(`⚠️ خطأ في الاتصال بسيرفر Rasa (${res.status}).`);
+        }
+        const arr = await res.json();
+        // Rasa returns: [{recipient_id, text, image?, buttons?}]
+        const fullText = (Array.isArray(arr) ? arr : [])
+          .map((m: { text?: string }) => m.text).filter(Boolean).join("\n\n") || "…";
+
+        if (conversationId) {
+          await supabase.from("messages").insert({
+            conversation_id: conversationId, role: "assistant", content: fullText,
+          });
+          dispatchAll("message.created", {
+            conversation_id: conversationId, session_id,
+            role: "assistant", content: fullText,
+          }).catch(() => {});
+        }
+        return sseStatic(fullText);
+      } catch (e) {
+        console.error("Rasa fetch failed:", e);
+        return sseStatic(`⚠️ تعذر الاتصال بسيرفر Rasa: ${e instanceof Error ? e.message : "Unknown"}`);
+      }
+    }
+
+    // ─── Engine: LOVABLE AI (default) ──────────────────────
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -95,7 +139,6 @@ Deno.serve(async (req) => {
       return errJson("AI gateway error", 500);
     }
 
-    // Tee the stream: one to client, one to capture for DB
     const [toClient, toCapture] = response.body!.tee();
     captureAssistantReply(toCapture, conversationId, session_id).catch(() => {});
 
@@ -107,6 +150,22 @@ Deno.serve(async (req) => {
     return errJson(e instanceof Error ? e.message : "Unknown", 500);
   }
 });
+
+function sseStatic(text: string) {
+  // Stream text chunked so client typing indicator behaves naturally
+  const enc = new TextEncoder();
+  const stream = new ReadableStream({
+    start(controller) {
+      const chunks = text.match(/.{1,40}/gs) || [text];
+      for (const c of chunks) {
+        controller.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: c } }] })}\n\n`));
+      }
+      controller.enqueue(enc.encode("data: [DONE]\n\n"));
+      controller.close();
+    },
+  });
+  return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+}
 
 function errJson(error: string, status: number) {
   return new Response(JSON.stringify({ error }), {

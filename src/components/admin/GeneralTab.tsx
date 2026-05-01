@@ -6,9 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, Bot, Sparkles, CheckCircle2, XCircle, Server } from "lucide-react";
 import { AdminSettings, errorMessage } from "@/types/admin";
 
 const MODELS = [
@@ -22,6 +23,8 @@ const MODELS = [
 export default function GeneralTab() {
   const [s, setS] = useState<AdminSettings | null>(null);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [rasaTest, setRasaTest] = useState<{ ok: boolean; status?: number; duration_ms?: number; error?: string; response?: string } | null>(null);
 
   useEffect(() => {
     adminApi<AdminSettings>("get_settings", { method: "GET" })
@@ -46,10 +49,110 @@ export default function GeneralTab() {
     }
   };
 
+  const testRasa = async () => {
+    if (!s?.rasa_url) return toast.error("أدخل رابط Rasa أولاً");
+    setTesting(true);
+    setRasaTest(null);
+    try {
+      const r = await adminApi<typeof rasaTest>("test_rasa", { body: { url: s.rasa_url } });
+      setRasaTest(r);
+      if (r?.ok) toast.success(`اتصال ناجح (${r.duration_ms}ms)`);
+      else toast.error(r?.error || `فشل الاتصال (${r?.status})`);
+    } catch (e) { toast.error(errorMessage(e)); }
+    finally { setTesting(false); }
+  };
+
   if (!s) return <div className="flex justify-center p-12"><Loader2 className="w-6 h-6 animate-spin" /></div>;
 
   return (
     <div className="space-y-4">
+      {/* ─── Engine ─── */}
+      <Card className="p-6 space-y-4 border-brand/30">
+        <div className="flex items-center gap-2">
+          <Bot className="w-5 h-5 text-brand" />
+          <h3 className="font-bold text-lg">محرك المحادثة</h3>
+          <Badge variant="outline" className="ms-auto">{s.engine === "rasa" ? "Rasa Pro" : "Lovable AI"}</Badge>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => upd("engine", "lovable")}
+            className={`p-4 rounded-lg border-2 text-right transition ${s.engine === "lovable" ? "border-brand bg-brand/5" : "border-border hover:border-brand/40"}`}
+          >
+            <div className="flex items-center gap-2 mb-1"><Sparkles className="w-4 h-4 text-brand" /><span className="font-bold">Lovable AI</span></div>
+            <p className="text-xs text-muted-foreground">Gemini / GPT — جاهز فوراً، يدعم Streaming</p>
+          </button>
+          <button
+            type="button"
+            onClick={() => upd("engine", "rasa")}
+            className={`p-4 rounded-lg border-2 text-right transition ${s.engine === "rasa" ? "border-brand bg-brand/5" : "border-border hover:border-brand/40"}`}
+          >
+            <div className="flex items-center gap-2 mb-1"><Server className="w-4 h-4 text-brand" /><span className="font-bold">Rasa Pro Self-hosted</span></div>
+            <p className="text-xs text-muted-foreground">سيرفرك الخاص — تحكم كامل بالنوايا والـ flows</p>
+          </button>
+        </div>
+
+        {s.engine === "rasa" && (
+          <div className="space-y-3 pt-2 border-t">
+            <div>
+              <Label>رابط سيرفر Rasa</Label>
+              <Input
+                dir="ltr"
+                value={s.rasa_url}
+                onChange={(e) => upd("rasa_url", e.target.value)}
+                placeholder="https://rasa.example.com"
+                className="mt-1.5 font-mono text-sm"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                سيُضاف تلقائياً <code dir="ltr">/webhooks/rest/webhook</code>
+              </p>
+            </div>
+            <div>
+              <Label>مهلة الاتصال (مللي ثانية)</Label>
+              <Input
+                type="number" min={1000} max={60000} step={1000}
+                value={s.rasa_timeout_ms}
+                onChange={(e) => upd("rasa_timeout_ms", Number(e.target.value))}
+                className="mt-1.5"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Button onClick={testRasa} disabled={testing} variant="outline" size="sm">
+                {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Server className="w-4 h-4" />}
+                اختبار الاتصال
+              </Button>
+              {rasaTest && (
+                <Badge variant={rasaTest.ok ? "default" : "destructive"} className="gap-1">
+                  {rasaTest.ok ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                  {rasaTest.ok ? `${rasaTest.duration_ms}ms` : (rasaTest.error || `HTTP ${rasaTest.status}`)}
+                </Badge>
+              )}
+            </div>
+            {rasaTest?.response && (
+              <pre dir="ltr" className="text-xs bg-muted p-2 rounded overflow-x-auto max-h-32">{rasaTest.response}</pre>
+            )}
+          </div>
+        )}
+
+        {s.engine === "lovable" && (
+          <div className="pt-2 border-t">
+            <Label>النموذج</Label>
+            <Select value={s.ai_model} onValueChange={(v) => upd("ai_model", v)}>
+              <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {MODELS.map((m) => <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Label className="mt-3 block">شخصية البوت (System Prompt)</Label>
+            <Textarea
+              value={s.system_prompt} onChange={(e) => upd("system_prompt", e.target.value)}
+              rows={5} className="mt-1.5 font-mono text-sm"
+            />
+          </div>
+        )}
+      </Card>
+
+      {/* ─── الهوية والمظهر ─── */}
       <Card className="p-6 space-y-4">
         <h3 className="font-bold text-lg">الهوية والمظهر</h3>
         <div className="grid md:grid-cols-2 gap-4">
@@ -74,6 +177,25 @@ export default function GeneralTab() {
               </SelectContent>
             </Select>
           </div>
+          <div>
+            <Label>نمط الفقاعات</Label>
+            <Select value={s.bubble_style} onValueChange={(v) => upd("bubble_style", v as AdminSettings["bubble_style"])}>
+              <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="modern">عصري (مدوّر)</SelectItem>
+                <SelectItem value="classic">كلاسيكي</SelectItem>
+                <SelectItem value="compact">مدمج</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="md:col-span-2">
+            <Label>عنوان فرعي للهيدر (مثل: متصل الآن • نرد خلال دقائق)</Label>
+            <Input value={s.header_subtitle} onChange={(e) => upd("header_subtitle", e.target.value)} className="mt-1.5" />
+          </div>
+          <div className="md:col-span-2">
+            <Label>رابط صورة الأفاتار (اختياري)</Label>
+            <Input dir="ltr" value={s.avatar_url} onChange={(e) => upd("avatar_url", e.target.value)} placeholder="https://..." className="mt-1.5" />
+          </div>
         </div>
         <div>
           <Label>رسالة الترحيب</Label>
@@ -87,28 +209,23 @@ export default function GeneralTab() {
             className="mt-1.5" rows={4}
           />
         </div>
-      </Card>
-
-      <Card className="p-6 space-y-4">
-        <h3 className="font-bold text-lg">الذكاء الاصطناعي</h3>
-        <div>
-          <Label>النموذج</Label>
-          <Select value={s.ai_model} onValueChange={(v) => upd("ai_model", v)}>
-            <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {MODELS.map((m) => <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>شخصية البوت (System Prompt)</Label>
-          <Textarea
-            value={s.system_prompt} onChange={(e) => upd("system_prompt", e.target.value)}
-            rows={6} className="mt-1.5 font-mono text-sm"
-          />
+        <div className="grid md:grid-cols-3 gap-3 pt-2">
+          <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg">
+            <Label className="cursor-pointer">شارة Powered by</Label>
+            <Switch checked={s.show_branding} onCheckedChange={(v) => upd("show_branding", v)} />
+          </div>
+          <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg">
+            <Label className="cursor-pointer">صوت إشعار</Label>
+            <Switch checked={s.sound_enabled} onCheckedChange={(v) => upd("sound_enabled", v)} />
+          </div>
+          <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg">
+            <Label className="cursor-pointer">السماح بتدخّل بشري</Label>
+            <Switch checked={s.allow_human_takeover} onCheckedChange={(v) => upd("allow_human_takeover", v)} />
+          </div>
         </div>
       </Card>
 
+      {/* ─── الصوت ─── */}
       <Card className="p-6 space-y-4">
         <h3 className="font-bold text-lg">الصوت</h3>
         <div className="flex items-center justify-between">
@@ -133,6 +250,7 @@ export default function GeneralTab() {
         </div>
       </Card>
 
+      {/* ─── ساعات العمل ─── */}
       <Card className="p-6 space-y-4">
         <h3 className="font-bold text-lg">ساعات العمل</h3>
         <div className="flex items-center justify-between">

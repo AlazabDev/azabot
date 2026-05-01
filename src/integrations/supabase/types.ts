@@ -38,16 +38,25 @@ export type Database = {
       bot_settings: {
         Row: {
           ai_model: string
+          allow_human_takeover: boolean
           auto_speak: boolean
+          avatar_url: string
           bot_name: string
+          bubble_style: string
           business_hours: Json
           business_hours_enabled: boolean
           created_at: string
+          engine: string
+          header_subtitle: string
           id: number
           offline_message: string
           position: string
           primary_color: string
           quick_replies: Json
+          rasa_timeout_ms: number
+          rasa_url: string
+          show_branding: boolean
+          sound_enabled: boolean
           system_prompt: string
           updated_at: string
           voice_enabled: boolean
@@ -56,16 +65,25 @@ export type Database = {
         }
         Insert: {
           ai_model?: string
+          allow_human_takeover?: boolean
           auto_speak?: boolean
+          avatar_url?: string
           bot_name?: string
+          bubble_style?: string
           business_hours?: Json
           business_hours_enabled?: boolean
           created_at?: string
+          engine?: string
+          header_subtitle?: string
           id: number
           offline_message?: string
           position?: string
           primary_color?: string
           quick_replies?: Json
+          rasa_timeout_ms?: number
+          rasa_url?: string
+          show_branding?: boolean
+          sound_enabled?: boolean
           system_prompt?: string
           updated_at?: string
           voice_enabled?: boolean
@@ -74,16 +92,25 @@ export type Database = {
         }
         Update: {
           ai_model?: string
+          allow_human_takeover?: boolean
           auto_speak?: boolean
+          avatar_url?: string
           bot_name?: string
+          bubble_style?: string
           business_hours?: Json
           business_hours_enabled?: boolean
           created_at?: string
+          engine?: string
+          header_subtitle?: string
           id?: number
           offline_message?: string
           position?: string
           primary_color?: string
           quick_replies?: Json
+          rasa_timeout_ms?: number
+          rasa_url?: string
+          show_branding?: boolean
+          sound_enabled?: boolean
           system_prompt?: string
           updated_at?: string
           voice_enabled?: boolean
@@ -94,7 +121,10 @@ export type Database = {
       }
       conversations: {
         Row: {
+          admin_notes: string | null
+          assigned_admin: string | null
           created_at: string
+          human_takeover: boolean
           id: string
           last_message_at: string
           message_count: number
@@ -105,7 +135,10 @@ export type Database = {
           visitor_name: string | null
         }
         Insert: {
+          admin_notes?: string | null
+          assigned_admin?: string | null
           created_at?: string
+          human_takeover?: boolean
           id?: string
           last_message_at?: string
           message_count?: number
@@ -116,7 +149,10 @@ export type Database = {
           visitor_name?: string | null
         }
         Update: {
+          admin_notes?: string | null
+          assigned_admin?: string | null
           created_at?: string
+          human_takeover?: boolean
           id?: string
           last_message_at?: string
           message_count?: number
@@ -248,42 +284,57 @@ export type Database = {
       bot_settings_public: {
         Row: {
           auto_speak: boolean | null
+          avatar_url: string | null
           bot_name: string | null
+          bubble_style: string | null
           business_hours: Json | null
           business_hours_enabled: boolean | null
+          header_subtitle: string | null
           id: number | null
           offline_message: string | null
           position: string | null
           primary_color: string | null
           quick_replies: Json | null
+          show_branding: boolean | null
+          sound_enabled: boolean | null
           voice_enabled: boolean | null
           voice_name: string | null
           welcome_message: string | null
         }
         Insert: {
           auto_speak?: boolean | null
+          avatar_url?: string | null
           bot_name?: string | null
+          bubble_style?: string | null
           business_hours?: Json | null
           business_hours_enabled?: boolean | null
+          header_subtitle?: string | null
           id?: number | null
           offline_message?: string | null
           position?: string | null
           primary_color?: string | null
           quick_replies?: Json | null
+          show_branding?: boolean | null
+          sound_enabled?: boolean | null
           voice_enabled?: boolean | null
           voice_name?: string | null
           welcome_message?: string | null
         }
         Update: {
           auto_speak?: boolean | null
+          avatar_url?: string | null
           bot_name?: string | null
+          bubble_style?: string | null
           business_hours?: Json | null
           business_hours_enabled?: boolean | null
+          header_subtitle?: string | null
           id?: number | null
           offline_message?: string | null
           position?: string | null
           primary_color?: string | null
           quick_replies?: Json | null
+          show_branding?: boolean | null
+          sound_enabled?: boolean | null
           voice_enabled?: boolean | null
           voice_name?: string | null
           welcome_message?: string | null
