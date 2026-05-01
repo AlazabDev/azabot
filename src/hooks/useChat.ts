@@ -7,7 +7,7 @@
 import { useState, useCallback, useRef } from "react";
 import { streamChat, uploadChatFile, uid, downloadChat } from "@/lib/chat-service";
 import { toast } from "sonner";
-import type { Message, ApiMessage, Attachment } from "@/types/chat";
+import type { Message, ApiMessage, Attachment, MessageButton } from "@/types/chat";
 
 export function useChat(siteId?: string) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -65,61 +65,76 @@ export function useChat(siteId?: string) {
       const controller = new AbortController();
       abortRef.current = controller;
 
+      const appendAssistantText = (chunk: string, fileName?: string, buttons?: MessageButton[]) => {
+        const text = files && files.length > 1 && fileName
+          ? `ملف ${fileName}:\n${chunk}`
+          : chunk;
+        accumulated += accumulated ? `\n\n${text}` : text;
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId
+              ? {
+                  ...m,
+                  content: accumulated,
+                  buttons: buttons && buttons.length > 0 ? buttons : m.buttons,
+                }
+              : m
+          )
+        );
+      };
+
+      const finishRequest = () => {
+        setStreaming(false);
+        abortRef.current = null;
+        if (!accumulated) {
+          setMessages((prev) => prev.filter((m) => m.id !== assistantId));
+          toast.error("لم يأتِ رد من الخادم. حاول مرة أخرى.");
+        }
+      };
+
       const request = files?.length
-        ? uploadChatFile({
-            file: files[0],
-            message: trimmed,
-            siteId,
-            onDelta: (chunk) => {
-              accumulated += chunk;
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantId ? { ...m, content: accumulated } : m
-                )
-              );
-            },
-            onDone: () => {
-              setStreaming(false);
-              abortRef.current = null;
-              if (!accumulated) {
-                setMessages((prev) => prev.filter((m) => m.id !== assistantId));
-                toast.error("لم يأتِ رد من الخادم. حاول مرة أخرى.");
-              }
-            },
-            onError: (msg) => {
-              toast.error(msg);
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantId
-                    ? { ...m, content: msg, isError: true }
-                    : m
-                )
-              );
-              setStreaming(false);
-              abortRef.current = null;
-            },
-            signal: controller.signal,
-          })
+        ? (async () => {
+            for (const file of files) {
+              if (controller.signal.aborted) break;
+              await uploadChatFile({
+                file,
+                message: trimmed,
+                siteId,
+                onDelta: (chunk, buttons) => appendAssistantText(chunk, file.name, buttons),
+                onDone: () => {},
+                onError: (msg) => {
+                  const errorText = `${file.name}: ${msg}`;
+                  toast.error(errorText);
+                  appendAssistantText(errorText, file.name);
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === assistantId ? { ...m, isError: true } : m
+                    )
+                  );
+                },
+                signal: controller.signal,
+              });
+            }
+            finishRequest();
+          })()
         : streamChat({
             messages: apiMessages,
             siteId,
-            onDelta: (chunk) => {
+            onDelta: (chunk, buttons) => {
               accumulated += chunk;
               setMessages((prev) =>
                 prev.map((m) =>
-                  m.id === assistantId ? { ...m, content: accumulated } : m
+                  m.id === assistantId
+                    ? {
+                        ...m,
+                        content: accumulated,
+                        buttons: buttons && buttons.length > 0 ? buttons : m.buttons,
+                      }
+                    : m
                 )
               );
             },
-            onDone: () => {
-              setStreaming(false);
-              abortRef.current = null;
-              // إذا جاء الرد فارغاً
-              if (!accumulated) {
-                setMessages((prev) => prev.filter((m) => m.id !== assistantId));
-                toast.error("لم يأتِ رد من الخادم. حاول مرة أخرى.");
-              }
-            },
+            onDone: finishRequest,
             onError: (msg) => {
               toast.error(msg);
               setMessages((prev) =>

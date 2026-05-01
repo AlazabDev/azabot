@@ -39,7 +39,7 @@ export function useTTS() {
 
       try {
         setSpeaking(true);
-        await speakInBrowser(cleanText, selectedVoice.lang);
+        await speakInBrowser(cleanText, selectedVoice.lang, selectedVoice.serverVoice);
       } finally {
         setSpeaking(false);
       }

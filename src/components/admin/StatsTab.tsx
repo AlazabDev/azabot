@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { adminApi } from "@/lib/adminApi";
 import { Card } from "@/components/ui/card";
-import { MessageSquare, Users, Calendar } from "lucide-react";
+import { MessageSquare, Users, Calendar, Paperclip } from "lucide-react";
 import { AdminStats } from "@/types/admin";
 
 export default function StatsTab() {
@@ -14,11 +14,12 @@ export default function StatsTab() {
   const items = [
     { label: "إجمالي المحادثات", value: stats?.conversations ?? "—", icon: Users, color: "text-brand" },
     { label: "إجمالي الرسائل", value: stats?.messages ?? "—", icon: MessageSquare, color: "text-primary" },
+    { label: "الملفات المرفوعة", value: stats?.uploads ?? "—", icon: Paperclip, color: "text-amber-500" },
     { label: "محادثات اليوم", value: stats?.today ?? "—", icon: Calendar, color: "text-green-500" },
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       {items.map((it) => (
         <Card key={it.label} className="p-6">
           <div className="flex items-center justify-between">
@@ -30,7 +31,7 @@ export default function StatsTab() {
           </div>
         </Card>
       ))}
-      <Card className="p-6 md:col-span-3">
+      <Card className="p-6 md:col-span-4">
         <h3 className="font-bold mb-2">رابط البوت العائم</h3>
         <p className="text-sm text-muted-foreground mb-3">
           ضع هذا الكود في موقع ووردبريس (Custom HTML / Header & Footer plugin):

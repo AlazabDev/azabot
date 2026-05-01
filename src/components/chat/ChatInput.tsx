@@ -75,16 +75,16 @@ export function ChatInput({
       )}
 
       {/* Input row */}
-      <div className="flex items-end gap-2 p-3">
+      <div className="flex items-end gap-2 p-3" dir="ltr">
         {/* Send */}
         <Button
           size="icon"
           onClick={onSend}
           disabled={!canSend}
-          className="bg-brand hover:bg-brand-glow text-brand-foreground rounded-xl shrink-0 transition-colors"
+          className="bg-brand hover:bg-brand-glow text-brand-foreground rounded-xl shrink-0 transition-colors shadow-sm"
           aria-label="إرسال"
         >
-          <Send className="w-4 h-4 rotate-180" aria-hidden />
+          <Send className="w-4 h-4" aria-hidden />
         </Button>
 
         {/* Textarea */}
@@ -101,6 +101,7 @@ export function ChatInput({
           rows={1}
           className="resize-none min-h-[40px] max-h-32 bg-muted/40 border-0 focus-visible:ring-1 focus-visible:ring-brand text-right rounded-xl text-sm"
           aria-label="حقل الرسالة"
+          dir="rtl"
           disabled={streaming}
         />
 

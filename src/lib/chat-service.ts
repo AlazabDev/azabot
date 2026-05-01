@@ -4,14 +4,26 @@
  */
 
 import { CONFIG } from "./config";
-import type { ApiMessage } from "@/types/chat";
+import type { ApiMessage, MessageButton } from "@/types/chat";
 
 let currentAudio: HTMLAudioElement | null = null;
+let currentTtsAbortController: AbortController | null = null;
+let currentTtsSequence = 0;
+
+async function readJsonResponse<T = Record<string, unknown>>(response: Response): Promise<T | null> {
+  const text = await response.text();
+  if (!text.trim()) return null;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error("رد الخادم ليس JSON صالحًا");
+  }
+}
 
 interface StreamChatOptions {
   messages: ApiMessage[];
   siteId?: string;
-  onDelta: (text: string) => void;
+  onDelta: (text: string, buttons?: MessageButton[]) => void;
   onDone: () => void;
   onError: (msg: string) => void;
   signal?: AbortSignal;
@@ -60,9 +72,9 @@ export async function streamChat({
   }
 
   try {
-    const data = await resp.json();
-    const text = normalizeResponses(data.responses);
-    if (text) onDelta(text);
+    const data = await readJsonResponse<{ responses?: unknown[] }>(resp);
+    const normalized = normalizeResponses(data?.responses);
+    if (normalized.text) onDelta(normalized.text, normalized.buttons);
   } catch {
     onError("تعذّر قراءة رد الخادم.");
     return;
@@ -88,15 +100,15 @@ export async function speechToText(audioBlob: Blob): Promise<string> {
     throw new Error(`STT failed: ${response.status}`);
   }
 
-  const data = await response.json();
-  return (data.transcript as string | undefined) || "";
+  const data = await readJsonResponse<{ transcript?: string }>(response);
+  return (data?.transcript as string | undefined) || "";
 }
 
 interface UploadChatFileOptions {
   file: File;
   message?: string;
   siteId?: string;
-  onDelta: (text: string) => void;
+  onDelta: (text: string, buttons?: MessageButton[]) => void;
   onDone: () => void;
   onError: (msg: string) => void;
   signal?: AbortSignal;
@@ -139,9 +151,9 @@ export async function uploadChatFile({
   }
 
   try {
-    const data = await response.json();
-    const text = normalizeResponses(data.responses);
-    if (text) onDelta(text);
+    const data = await readJsonResponse<{ responses?: unknown[] }>(response);
+    const normalized = normalizeResponses(data?.responses);
+    if (normalized.text) onDelta(normalized.text, normalized.buttons);
   } catch {
     onError("تعذّر قراءة رد الخادم بعد رفع الملف.");
     return;
@@ -150,32 +162,16 @@ export async function uploadChatFile({
   onDone();
 }
 
-export async function speakInBrowser(text: string, lang = "ar-SA"): Promise<void> {
+export async function speakInBrowser(text: string, lang = "ar-SA", serverVoice?: string): Promise<void> {
   const cleanText = stripMarkdown(text);
-  try {
-    await playServerTTS(cleanText);
-    return;
-  } catch {
-    // Fallback to browser voices when server-side TTS is unavailable.
-  }
-
-  return new Promise((resolve, reject) => {
-    if (!("speechSynthesis" in window)) {
-      reject(new Error("Speech synthesis is not supported"));
-      return;
-    }
-    stopSpeechPlayback();
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = lang;
-    utterance.rate = 0.95;
-    utterance.onend = () => resolve();
-    utterance.onerror = () => reject(new Error("Speech synthesis failed"));
-    window.speechSynthesis.speak(utterance);
-  });
+  void lang;
+  await playServerTTS(cleanText, serverVoice);
 }
 
 export function stopSpeechPlayback(): void {
+  currentTtsSequence += 1;
+  currentTtsAbortController?.abort();
+  currentTtsAbortController = null;
   if (currentAudio) {
     currentAudio.pause();
     currentAudio.src = "";
@@ -186,36 +182,51 @@ export function stopSpeechPlayback(): void {
 
 // ─── Helpers ────────────────────────────────────────────────
 
-async function playServerTTS(text: string): Promise<void> {
+async function playServerTTS(text: string, voice?: string): Promise<void> {
   if (!text) return;
+  stopSpeechPlayback();
+  const sequence = ++currentTtsSequence;
+  const abortController = new AbortController();
+  currentTtsAbortController = abortController;
   const response = await fetch(CONFIG.api.tts, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text, voice }),
+    signal: abortController.signal,
   });
   if (!response.ok) {
     throw new Error(`TTS failed: ${response.status}`);
   }
+  if (sequence !== currentTtsSequence) return;
   const blob = await response.blob();
+  if (sequence !== currentTtsSequence) return;
   const url = URL.createObjectURL(blob);
-  stopSpeechPlayback();
   const audio = new Audio(url);
   currentAudio = audio;
 
   await new Promise<void>((resolve, reject) => {
     audio.onended = () => {
       URL.revokeObjectURL(url);
-      currentAudio = null;
+      if (sequence === currentTtsSequence) {
+        currentAudio = null;
+        currentTtsAbortController = null;
+      }
       resolve();
     };
     audio.onerror = () => {
       URL.revokeObjectURL(url);
-      currentAudio = null;
+      if (sequence === currentTtsSequence) {
+        currentAudio = null;
+        currentTtsAbortController = null;
+      }
       reject(new Error("Server TTS playback failed"));
     };
     audio.play().catch((error) => {
       URL.revokeObjectURL(url);
-      currentAudio = null;
+      if (sequence === currentTtsSequence) {
+        currentAudio = null;
+        currentTtsAbortController = null;
+      }
       reject(error);
     });
   });
@@ -240,16 +251,37 @@ function getSenderId(): string {
   return value;
 }
 
-function normalizeResponses(responses: unknown): string {
-  if (!Array.isArray(responses)) return "";
-  return responses
+function normalizeResponses(responses: unknown): { text: string; buttons: MessageButton[] } {
+  if (!Array.isArray(responses)) return { text: "", buttons: [] };
+
+  const buttons: MessageButton[] = [];
+  const text = responses
     .map((item) => {
       if (!item || typeof item !== "object") return "";
-      const text = (item as { text?: unknown }).text;
-      return typeof text === "string" ? text.trim() : "";
+      const textValue = (item as { text?: unknown }).text;
+      const rawButtons = (item as { buttons?: unknown }).buttons;
+      if (Array.isArray(rawButtons)) {
+        rawButtons.forEach((button) => {
+          if (!button || typeof button !== "object") return;
+          const title = typeof (button as { title?: unknown }).title === "string"
+            ? (button as { title: string }).title.trim()
+            : "";
+          const payload = typeof (button as { payload?: unknown }).payload === "string"
+            ? (button as { payload: string }).payload.trim()
+            : undefined;
+          const url = typeof (button as { url?: unknown }).url === "string"
+            ? (button as { url: string }).url.trim()
+            : undefined;
+          if (!title) return;
+          buttons.push({ title, payload, url });
+        });
+      }
+      return typeof textValue === "string" ? textValue.trim() : "";
     })
     .filter(Boolean)
     .join("\n\n");
+
+  return { text, buttons };
 }
 
 function stripMarkdown(text: string): string {

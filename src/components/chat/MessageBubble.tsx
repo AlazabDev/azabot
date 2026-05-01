@@ -1,6 +1,7 @@
 import ReactMarkdown from "react-markdown";
-import { Bot, Paperclip, Volume2 } from "lucide-react";
+import { Bot, Copy, ExternalLink, Paperclip, Volume2 } from "lucide-react";
 import { formatBytes } from "@/lib/chat-service";
+import { toast } from "sonner";
 import type { Message } from "@/types/chat";
 
 interface MessageBubbleProps {
@@ -11,6 +12,19 @@ interface MessageBubbleProps {
 
 export function MessageBubble({ msg, ttsEnabled, onSpeak }: MessageBubbleProps) {
   const isUser = msg.role === "user";
+  const handleButtonClick = async (title: string, payload?: string, url?: string) => {
+    if (url) {
+      window.open(url, "_blank", "noopener,noreferrer");
+      return;
+    }
+    const value = payload || title;
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success("تم نسخ رقم الطلب.");
+    } catch {
+      toast.error("تعذّر نسخ رقم الطلب.");
+    }
+  };
 
   return (
     <div
@@ -52,6 +66,22 @@ export function MessageBubble({ msg, ttsEnabled, onSpeak }: MessageBubbleProps) 
                   <span className="truncate flex-1">{a.name}</span>
                   <span className="opacity-60 shrink-0">{formatBytes(a.size)}</span>
                 </div>
+              ))}
+            </div>
+          )}
+
+          {!isUser && msg.buttons && msg.buttons.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {msg.buttons.map((button, index) => (
+                <button
+                  key={`${button.title}-${index}`}
+                  type="button"
+                  onClick={() => handleButtonClick(button.title, button.payload, button.url)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-brand/20 bg-brand/10 px-3 py-2 text-xs font-medium text-brand transition-colors hover:bg-brand/15"
+                >
+                  {button.url ? <ExternalLink className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                  <span className="max-w-[220px] truncate">{button.title}</span>
+                </button>
               ))}
             </div>
           )}

@@ -18,22 +18,22 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 25% 12%;
 
-    /* Brand: deep navy + warm amber */
-    --primary: 222 47% 11%;
+    /* Brand: #030957 navy + warm amber */
+    --primary: 236 93% 18%;
     --primary-foreground: 45 100% 60%;
 
     --brand: 42 100% 55%;
-    --brand-foreground: 222 47% 11%;
+    --brand-foreground: 236 93% 18%;
     --brand-glow: 38 100% 65%;
 
     --secondary: 220 14% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary-foreground: 236 93% 18%;
 
     --muted: 220 14% 96%;
     --muted-foreground: 220 10% 45%;
 
     --accent: 42 100% 96%;
-    --accent-foreground: 222 47% 11%;
+    --accent-foreground: 236 93% 18%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -45,8 +45,8 @@
     --radius: 1rem;
 
     /* Shadows */
-    --shadow-chat: 0 24px 64px -16px hsl(222 47% 11% / 0.28);
-    --shadow-bubble: 0 4px 14px -4px hsl(222 47% 11% / 0.10);
+    --shadow-chat: 0 24px 64px -16px hsl(236 93% 18% / 0.28);
+    --shadow-bubble: 0 4px 14px -4px hsl(236 93% 18% / 0.10);
 
     /* Transitions */
     --transition-smooth: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
@@ -63,20 +63,20 @@
   }
 
   .dark {
-    --background: 222 47% 6%;
+    --background: 236 93% 10%;
     --foreground: 0 0% 97%;
 
-    --card: 222 47% 9%;
+    --card: 236 88% 12%;
     --card-foreground: 0 0% 97%;
 
-    --popover: 222 47% 9%;
+    --popover: 236 88% 12%;
     --popover-foreground: 0 0% 97%;
 
     --primary: 42 100% 55%;
-    --primary-foreground: 222 47% 11%;
+    --primary-foreground: 236 93% 18%;
 
     --brand: 42 100% 55%;
-    --brand-foreground: 222 47% 11%;
+    --brand-foreground: 236 93% 18%;
     --brand-glow: 38 100% 65%;
 
     --secondary: 222 30% 14%;

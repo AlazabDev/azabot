@@ -3,12 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { adminApi, adminToken } from "@/lib/adminApi";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, Settings, Plug, MessageSquare, FileText, BarChart3 } from "lucide-react";
+import { LogOut, Settings, Plug, MessageSquare, FileText, BarChart3, Paperclip } from "lucide-react";
 import azabotLogo from "@/assets/azabot-logo.png";
 import { toast } from "sonner";
 import GeneralTab from "@/components/admin/GeneralTab";
 import IntegrationsTab from "@/components/admin/IntegrationsTab";
 import ConversationsTab from "@/components/admin/ConversationsTab";
+import UploadsTab from "@/components/admin/UploadsTab";
 import LogsTab from "@/components/admin/LogsTab";
 import StatsTab from "@/components/admin/StatsTab";
 
@@ -55,17 +56,19 @@ export default function Admin() {
 
       <main className="max-w-7xl mx-auto px-4 py-6">
         <Tabs defaultValue="stats" className="w-full">
-          <TabsList className="grid grid-cols-5 w-full max-w-2xl mb-6">
+          <TabsList className="grid grid-cols-2 md:grid-cols-6 w-full max-w-4xl mb-6 h-auto">
             <TabsTrigger value="stats" className="gap-1.5"><BarChart3 className="w-4 h-4" /> نظرة عامة</TabsTrigger>
             <TabsTrigger value="general" className="gap-1.5"><Settings className="w-4 h-4" /> الإعدادات</TabsTrigger>
             <TabsTrigger value="integrations" className="gap-1.5"><Plug className="w-4 h-4" /> التكاملات</TabsTrigger>
             <TabsTrigger value="conversations" className="gap-1.5"><MessageSquare className="w-4 h-4" /> المحادثات</TabsTrigger>
+            <TabsTrigger value="uploads" className="gap-1.5"><Paperclip className="w-4 h-4" /> الملفات</TabsTrigger>
             <TabsTrigger value="logs" className="gap-1.5"><FileText className="w-4 h-4" /> السجلات</TabsTrigger>
           </TabsList>
           <TabsContent value="stats"><StatsTab /></TabsContent>
           <TabsContent value="general"><GeneralTab /></TabsContent>
           <TabsContent value="integrations"><IntegrationsTab /></TabsContent>
           <TabsContent value="conversations"><ConversationsTab /></TabsContent>
+          <TabsContent value="uploads"><UploadsTab /></TabsContent>
           <TabsContent value="logs"><LogsTab /></TabsContent>
         </Tabs>
       </main>

@@ -22,6 +22,16 @@ export function ChatHeader({ onClose, onClear, streaming }: ChatHeaderProps) {
   const navigate = useNavigate();
   const { site } = useSite();
 
+  const handleNavItemClick = (href: string, external?: boolean) => {
+    setMenuOpen(false);
+    onClose();
+    if (external || href.startsWith("http://") || href.startsWith("https://") || href.startsWith("tel:")) {
+      window.open(href, href.startsWith("tel:") ? "_self" : "_blank", "noopener,noreferrer");
+      return;
+    }
+    navigate(href);
+  };
+
   return (
     <header
       className="rounded-t-2xl shrink-0"
@@ -81,20 +91,16 @@ export function ChatHeader({ onClose, onClear, streaming }: ChatHeaderProps) {
             </button>
 
             {menuOpen && (
-              <div className="absolute top-full left-0 mt-1 z-20 bg-card border border-border rounded-xl shadow-xl overflow-hidden w-48 animate-fade-in-up">
+              <div className="absolute top-full left-0 mt-1 z-20 bg-card border border-border rounded-xl shadow-xl overflow-hidden w-64 animate-fade-in-up">
                 <div className="max-h-64 overflow-y-auto py-1" dir="rtl">
                   {NAV_ITEMS.map((item) => (
                     <button
                       key={item.href}
-                      onClick={() => {
-                        setMenuOpen(false);
-                        onClose();
-                        navigate(item.href);
-                      }}
+                      onClick={() => handleNavItemClick(item.href, item.external)}
                       className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-foreground hover:bg-muted transition-colors text-right"
                     >
                       <span aria-hidden>{item.icon}</span>
-                      <span>{item.label}</span>
+                      <span className="truncate">{item.label}</span>
                     </button>
                   ))}
                 </div>

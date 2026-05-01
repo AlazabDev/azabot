@@ -6,11 +6,12 @@ import { Label } from "@/components/ui/label";
 import { adminLogin, adminToken } from "@/lib/adminApi";
 import { toast } from "sonner";
 import azabotLogo from "@/assets/azabot-logo.png";
-import { Loader2, Lock } from "lucide-react";
+import { Loader2, Lock, Mail } from "lucide-react";
 import { errorMessage } from "@/types/admin";
 
 export default function AdminLogin() {
   const nav = useNavigate();
+  const [email, setEmail] = useState("admin@alazab.com");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -20,13 +21,17 @@ export default function AdminLogin() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email.trim()) {
+      toast.error("أدخل بريد الإدارة");
+      return;
+    }
     if (!password.trim()) {
-      toast.error("أدخل مفتاح الإدارة");
+      toast.error("أدخل كلمة المرور");
       return;
     }
     setLoading(true);
     try {
-      await adminLogin(password);
+      await adminLogin(email, password);
       toast.success("تم الدخول");
       nav("/admin", { replace: true });
     } catch (e: unknown) {
@@ -45,11 +50,28 @@ export default function AdminLogin() {
           </div>
           <h1 className="text-2xl font-bold text-foreground">لوحة تحكم AzaBot</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            أدخل قيمة ADMIN_API_KEY للدخول
+            تسجيل دخول محلي من سيرفر Rasa/FastAPI
           </p>
         </div>
 
         <form onSubmit={onSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="email">البريد الإلكتروني</Label>
+            <div className="relative mt-1.5">
+              <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="pr-10"
+                autoComplete="username"
+                autoFocus
+                required
+              />
+            </div>
+          </div>
+
           <div>
             <Label htmlFor="pw">كلمة المرور</Label>
             <div className="relative mt-1.5">
@@ -60,7 +82,7 @@ export default function AdminLogin() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="pr-10"
-                autoFocus
+                autoComplete="current-password"
                 required
               />
             </div>

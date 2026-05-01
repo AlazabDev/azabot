@@ -10,15 +10,35 @@ export const adminToken = {
   clear: () => localStorage.removeItem(TOKEN_KEY),
 };
 
-export async function adminLogin(password: string) {
-  const res = await fetch(`${API_ORIGIN}/admin/stats`, {
-    method: "GET",
-    headers: { "X-Admin-Token": password },
+async function readJsonResponse(res: Response) {
+  const text = await res.text();
+  if (!text.trim()) return null;
+  try {
+    return JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    throw new Error("رد الخادم ليس JSON صالحًا");
+  }
+}
+
+export async function adminLogin(email: string, password: string) {
+  const res = await fetch(`${API_ORIGIN}/admin/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.detail || data.error || "فشل الدخول");
-  adminToken.set(password);
+  const data = await readJsonResponse(res);
+  if (!res.ok) throw new Error((data?.detail as string) || (data?.error as string) || "فشل الدخول");
+  if (!data || !data.token || typeof data.token !== "string") {
+    throw new Error("رد الدخول غير صالح");
+  }
+  adminToken.set(data.token);
   return data;
+}
+
+export function adminAssetUrl(path?: string | null) {
+  if (!path) return "";
+  if (/^https?:\/\//i.test(path)) return path;
+  return `${API_ORIGIN}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
 export async function adminApi<T = unknown>(
@@ -30,14 +50,14 @@ export async function adminApi<T = unknown>(
   const qs = new URLSearchParams({ action, ...(opts.query || {}) }).toString();
   const res = await fetch(`${API_ORIGIN}/admin/api?${qs}`, {
     method: opts.method || "POST",
-    headers: { "Content-Type": "application/json", "X-Admin-Token": t },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${t}` },
     body: opts.method === "GET" ? undefined : JSON.stringify(opts.body || {}),
   });
-  const data = await res.json();
+  const data = await readJsonResponse(res);
   if (res.status === 401) {
     adminToken.clear();
     window.location.href = "/admin/login";
   }
-  if (!res.ok) throw new Error(data.detail || data.error || "خطأ");
-  return data as T;
+  if (!res.ok) throw new Error((data?.detail as string) || (data?.error as string) || "خطأ");
+  return (data ?? {}) as T;
 }

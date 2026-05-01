@@ -13,7 +13,6 @@ import { toast } from "sonner";
 
 import { useChat } from "@/hooks/useChat";
 import { useTTS } from "@/hooks/useTTS";
-import { uid } from "@/lib/chat-service";
 import { useSite } from "@/context/useSite";
 
 import { ChatHeader } from "./chat/ChatHeader";
@@ -36,6 +35,7 @@ export default function AzaBot() {
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastAutoSpokenMessageId = useRef<string | null>(null);
 
   // إعدادات الموقع النشط
   const { site } = useSite();
@@ -55,7 +55,10 @@ export default function AzaBot() {
   useEffect(() => {
     if (tab !== "voice") return;
     const lastBot = [...messages].reverse().find((m) => m.role === "assistant");
-    if (lastBot && !streaming) tts.speak(lastBot.content);
+    if (!lastBot || streaming) return;
+    if (lastAutoSpokenMessageId.current === lastBot.id) return;
+    lastAutoSpokenMessageId.current = lastBot.id;
+    tts.speak(lastBot.content);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, streaming, tab]);
 
@@ -109,6 +112,7 @@ export default function AzaBot() {
     setInputText("");
     setPendingAttachments([]);
     setPendingFiles([]);
+    lastAutoSpokenMessageId.current = null;
     toast.success("تم بدء محادثة جديدة.");
   }, [clearMessages]);
 
@@ -139,21 +143,39 @@ export default function AzaBot() {
       <ChatHeader onClose={handleClose} onClear={handleClear} streaming={streaming} />
 
       {/* Tabs */}
-      <div className="flex border-b border-border bg-card shrink-0" role="tablist">
-        <TabButton
-          active={tab === "text"}
-          onClick={() => setTab("text")}
-          icon={<MessageSquare className="w-4 h-4" />}
-          label="محادثة نصية"
-          id="tab-text"
-        />
-        <TabButton
-          active={tab === "voice"}
-          onClick={() => setTab("voice")}
-          icon={<Mic className="w-4 h-4" />}
-          label="محادثة صوتية"
-          id="tab-voice"
-        />
+      <div className="flex items-stretch border-b border-border bg-card shrink-0">
+        <div className="flex flex-1" role="tablist">
+          <TabButton
+            active={tab === "text"}
+            onClick={() => setTab("text")}
+            icon={<MessageSquare className="w-4 h-4" />}
+            label="محادثة نصية"
+            id="tab-text"
+          />
+          <TabButton
+            active={tab === "voice"}
+            onClick={() => setTab("voice")}
+            icon={<Mic className="w-4 h-4" />}
+            label="محادثة صوتية"
+            id="tab-voice"
+          />
+        </div>
+        {tab === "text" && (
+          <div className="flex items-center px-2 border-r border-border">
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={tts.toggle}
+              className="w-9 h-9 rounded-full"
+              aria-label={tts.enabled ? "إيقاف النطق" : "تشغيل النطق"}
+              title={tts.enabled ? "إيقاف النطق" : "تشغيل النطق"}
+            >
+              {tts.enabled
+                ? <Volume2 className="w-4 h-4 text-brand" />
+                : <VolumeX className="w-4 h-4 text-muted-foreground" />}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Voice selector (تبويب الصوت فقط) */}
@@ -167,7 +189,12 @@ export default function AzaBot() {
 
       {/* Body */}
       {tab === "voice" ? (
-        <VoiceView messages={messages} streaming={streaming} onSendText={handleVoiceSend} />
+        <VoiceView
+          messages={messages}
+          streaming={streaming}
+          onSendText={handleVoiceSend}
+          onSpeakText={tts.speak}
+        />
       ) : (
         <>
           <div
@@ -210,24 +237,6 @@ export default function AzaBot() {
             onRemoveFile={handleRemoveFile}
           />
         </>
-      )}
-
-      {/* TTS toggle في تبويب النص */}
-      {tab === "text" && (
-        <div className="absolute top-[3.5rem] left-2">
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={tts.toggle}
-            className="w-8 h-8 rounded-full"
-            aria-label={tts.enabled ? "إيقاف النطق" : "تشغيل النطق"}
-            title={tts.enabled ? "إيقاف النطق" : "تشغيل النطق"}
-          >
-            {tts.enabled
-              ? <Volume2 className="w-4 h-4 text-brand" />
-              : <VolumeX className="w-4 h-4 text-muted-foreground" />}
-          </Button>
-        </div>
       )}
     </div>
   );

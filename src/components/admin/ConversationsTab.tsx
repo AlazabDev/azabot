@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { adminApi } from "@/lib/adminApi";
+import { adminApi, adminAssetUrl } from "@/lib/adminApi";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, Trash2, MessageSquare } from "lucide-react";
+import { ExternalLink, Paperclip, Search, Trash2, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
+import { formatBytes } from "@/lib/chat-service";
 import { ConversationDetail, ConversationMessage, ConversationSummary, errorMessage } from "@/types/admin";
 
 export default function ConversationsTab() {
@@ -74,6 +75,39 @@ export default function ConversationsTab() {
               <div key={m.id} className={`p-3 rounded-lg ${m.role === "user" ? "bg-primary/10" : "bg-brand/10"}`}>
                 <div className="text-xs font-bold mb-1">{m.role === "user" ? "👤 الزائر" : "🤖 البوت"}</div>
                 <div className="text-sm whitespace-pre-wrap">{m.content}</div>
+                {m.attachments && m.attachments.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {m.attachments.map((attachment) => {
+                      const href = adminAssetUrl(attachment.download_url || attachment.url);
+                      if (!href) {
+                        return (
+                          <div
+                            key={attachment.id || attachment.name}
+                            className="flex items-center gap-2 rounded-md border border-border bg-background/70 px-3 py-2 text-xs"
+                          >
+                            <span className="text-muted-foreground">{formatBytes(attachment.size)}</span>
+                            <span className="truncate font-medium">{attachment.name}</span>
+                            <Paperclip className="w-3.5 h-3.5 text-brand" />
+                          </div>
+                        );
+                      }
+                      return (
+                        <a
+                          key={attachment.id || href}
+                          href={href}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-2 rounded-md border border-border bg-background/70 px-3 py-2 text-xs hover:bg-background"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span className="text-muted-foreground">{formatBytes(attachment.size)}</span>
+                          <span className="truncate font-medium">{attachment.name}</span>
+                          <Paperclip className="w-3.5 h-3.5 text-brand" />
+                        </a>
+                      );
+                    })}
+                  </div>
+                )}
                 <div className="text-xs text-muted-foreground mt-1">{new Date(m.created_at).toLocaleString("ar-EG")}</div>
               </div>
             ))}

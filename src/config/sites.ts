@@ -21,12 +21,12 @@ export interface SiteConfig {
 export const SITE_CONFIGS: Record<string, SiteConfig> = {
   "luxury-finishing": {
     id: "luxury-finishing",
-    name: "الأعزب للتشطيبات الفاخرة",
+    name: "العزب للتشطيبات الفاخرة",
     domain: ["luxury-finishing.alazab.com"],
     botName: "عزبوت التشطيبات",
     brandColor: "#C9A84C",
-    gradientHeader: "linear-gradient(135deg, #1a1208 0%, #3d2b0e 100%)",
-    systemPrompt: `أنت "عزبوت"، المساعد الذكي لشركة الأعزب للتشطيبات الفاخرة.
+    gradientHeader: "linear-gradient(135deg, #030957 0%, #08147a 100%)",
+    systemPrompt: `أنت "عزبوت"، المساعد الذكي لشركة العزب للتشطيبات الفاخرة.
 تخصصك: التشطيبات السكنية والتجارية الفاخرة، الديكور الداخلي، الرخام، الأسقف المستعارة.
 الشركة تعمل في مصر وتقدم خدمات تشطيب على أعلى مستوى.
 ردودك بالعربية الفصحى السهلة. كن مختصراً واحترافياً.
@@ -38,18 +38,18 @@ export const SITE_CONFIGS: Record<string, SiteConfig> = {
       "ما هي أنواع الرخام المتوفرة؟",
       "كيف أتواصل مع فريق المبيعات؟",
     ],
-    welcomeMessage: "مرحباً! أنا عزبوت، مساعد الأعزب للتشطيبات الفاخرة 🏠\nكيف يمكنني مساعدتك اليوم؟",
+    welcomeMessage: "مرحباً! أنا عزبوت، مساعد العزب للتشطيبات الفاخرة 🏠\nكيف يمكنني مساعدتك اليوم؟",
     language: "ar",
   },
 
   "brand-identity": {
     id: "brand-identity",
-    name: "الأعزب للهوية البصرية",
+    name: "العزب للهوية البصرية",
     domain: ["brand-identity.alazab.com"],
     botName: "عزبوت الهوية",
     brandColor: "#E63946",
-    gradientHeader: "linear-gradient(135deg, #1a0a0a 0%, #3d0e0e 100%)",
-    systemPrompt: `أنت "عزبوت"، المساعد الذكي لشركة الأعزب للهوية البصرية والتصميم.
+    gradientHeader: "linear-gradient(135deg, #030957 0%, #08147a 100%)",
+    systemPrompt: `أنت "عزبوت"، المساعد الذكي لشركة العزب للهوية البصرية والتصميم.
 تخصصك: تصميم الهوية البصرية، الشعارات، المطبوعات التسويقية، التصميم الرقمي، العلامات التجارية.
 ردودك بالعربية. كن إبداعياً واحترافياً في وصفك للخدمات.
 يمكنك الرد بالإنجليزية إذا خاطبك المستخدم بها.`,
@@ -59,7 +59,7 @@ export const SITE_CONFIGS: Record<string, SiteConfig> = {
       "ما الخدمات التصميمية المتوفرة؟",
       "كم يستغرق تنفيذ مشروع الهوية؟",
     ],
-    welcomeMessage: "مرحباً! أنا عزبوت، مساعد الأعزب للهوية البصرية 🎨\nكيف نساعدك في بناء علامتك التجارية؟",
+    welcomeMessage: "مرحباً! أنا عزبوت، مساعد العزب للهوية البصرية 🎨\nكيف نساعدك في بناء علامتك التجارية؟",
     language: "both",
   },
 
@@ -69,7 +69,7 @@ export const SITE_CONFIGS: Record<string, SiteConfig> = {
     domain: ["uberfix.alazab.com"],
     botName: "UberBot",
     brandColor: "#F7B731",
-    gradientHeader: "linear-gradient(135deg, #0f0f0f 0%, #2d2000 100%)",
+    gradientHeader: "linear-gradient(135deg, #030957 0%, #08147a 100%)",
     systemPrompt: `You are "UberBot", the smart assistant for UberFix maintenance services.
 Specialization: Home and commercial maintenance, plumbing, electrical, AC repair, general fixes.
 Respond in Arabic by default, English if the user writes in English.
@@ -87,43 +87,43 @@ For urgent requests, emphasize 24/7 availability.`,
 
   "laban-alasfour": {
     id: "laban-alasfour",
-    name: "ألبان العصفور",
+    name: "لبن العصفور",
     domain: ["laban-alasfour.alazab.com"],
     botName: "مساعد العصفور",
     brandColor: "#2ECC71",
-    gradientHeader: "linear-gradient(135deg, #082010 0%, #0e3d1e 100%)",
-    systemPrompt: `أنت "مساعد العصفور"، المساعد الذكي لشركة ألبان العصفور.
-تخصصك: منتجات الألبان الطازجة، جبن، زبادي، مشتقات الحليب.
-ردودك بالعربية. كن ودوداً وبسيطاً.
-يمكنك مساعدة العملاء في معرفة المنتجات، أماكن التوزيع، وكيفية الطلب.`,
+    gradientHeader: "linear-gradient(135deg, #030957 0%, #08147a 100%)",
+    systemPrompt: `أنت "مساعد العصفور"، المساعد الذكي لعلامة لبن العصفور ضمن منظومة العزب.
+تخصصك: توريد الخامات ومواد البناء والتشطيب والقطع النادرة التي يصعب توفيرها في السوق.
+اسم لبن العصفور يعني القدرة على توفير الصعب والمستحيل للمقاولين وأصحاب المشروعات، وليس منتجات ألبان.
+ردودك بالعربية. كن عملياً وواضحاً، وركز على نوع الخامة، الكمية، المواصفة، ومكان التسليم.`,
     quickActions: [
-      "ما هي منتجاتكم المتوفرة؟",
+      "أحتاج خامة صعب ألاقيها",
+      "أريد توريد مواد بناء",
       "كيف أطلب بالجملة؟",
-      "أين يمكنني إيجاد منتجاتكم؟",
-      "هل يوجد توصيل للمنازل؟",
+      "هل توفرون توصيل للموقع؟",
     ],
-    welcomeMessage: "أهلاً! أنا مساعد ألبان العصفور 🥛\nكيف يمكنني مساعدتك؟",
+    welcomeMessage: "أهلاً! أنا مساعد لبن العصفور\nأخبرني بالخامة أو القطعة التي تبحث عنها وسنساعدك في توفيرها.",
     language: "ar",
   },
 
   "alazab": {
     id: "alazab",
-    name: "مجموعة الأعزب",
+    name: "مجموعة العزب",
     domain: ["alazab.com", "www.alazab.com"],
     botName: "عزبوت",
     brandColor: "#F39C12",
-    gradientHeader: "linear-gradient(135deg, #0a0a1a 0%, #1a1535 100%)",
-    systemPrompt: `أنت "عزبوت"، المساعد الذكي لمجموعة الأعزب.
-مجموعة الأعزب تضم: التشطيبات الفاخرة، الهوية البصرية، خدمات الصيانة، ومنتجات الألبان.
+    gradientHeader: "linear-gradient(135deg, #030957 0%, #08147a 100%)",
+    systemPrompt: `أنت "عزبوت"، المساعد الذكي لمجموعة العزب.
+مجموعة العزب تضم: التشطيبات الفاخرة، الهوية البصرية، خدمات الصيانة، وتوريدات لبن العصفور للخامات والقطع الصعبة.
 مهمتك: توجيه العملاء للقسم المناسب وتقديم معلومات عامة عن المجموعة.
 ردودك بالعربية الفصحى السهلة. كن مرحباً واحترافياً.`,
     quickActions: [
-      "ما هي شركات مجموعة الأعزب؟",
+      "ما هي شركات مجموعة العزب؟",
       "أريد خدمة تشطيبات",
       "أريد تصميم هوية بصرية",
       "تواصل معنا",
     ],
-    welcomeMessage: "مرحباً! أنا عزبوت، مساعد مجموعة الأعزب 🌟\nكيف يمكنني توجيهك لخدماتنا؟",
+    welcomeMessage: "مرحباً! أنا عزبوت، مساعد مجموعة العزب 🌟\nكيف يمكنني توجيهك لخدماتنا؟",
     language: "ar",
   },
 };

@@ -1,6 +1,7 @@
 export interface AdminStats {
   conversations: number;
   messages: number;
+  uploads?: number;
   today: number;
   message_counts?: Record<string, number>;
   total?: number;
@@ -36,11 +37,29 @@ export interface ConversationSummary {
   last_message_at: string;
 }
 
+export interface AdminUpload {
+  id?: string;
+  kind?: "file" | "audio" | string;
+  name: string;
+  size: number;
+  content_type?: string;
+  url?: string;
+  download_url?: string;
+  conversation_id?: string;
+  session_id?: string;
+  message_id?: string;
+  brand?: string;
+  channel?: string;
+  note?: string;
+  created_at?: string;
+}
+
 export interface ConversationMessage {
   id: string;
   role: "user" | "assistant" | string;
   content: string;
   created_at: string;
+  attachments?: AdminUpload[];
 }
 
 export interface ConversationDetail extends ConversationSummary {

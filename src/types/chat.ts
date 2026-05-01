@@ -6,11 +6,18 @@ export interface Attachment {
   type: string;
 }
 
+export interface MessageButton {
+  title: string;
+  payload?: string;
+  url?: string;
+}
+
 export interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
   attachments?: Attachment[];
+  buttons?: MessageButton[];
   ts: number;
   isError?: boolean;
 }
@@ -26,6 +33,14 @@ export interface VoiceOption {
   label: string;
   desc: string;
   lang: string;
+  serverVoice?: string;
+}
+
+export interface NavItem {
+  label: string;
+  href: string;
+  icon: string;
+  external?: boolean;
 }
 
 export type ChatTab = "text" | "voice";
@@ -38,18 +53,19 @@ export const QUICK_ACTIONS = [
 ] as const;
 
 export const VOICES: VoiceOption[] = [
-  { id: "ar-sa", label: "الصوت الأساسي", desc: "عربي • ذكر • شاب", lang: "ar-SA" },
-  { id: "en-us-f", label: "سارة", desc: "أمريكي • أنثى • شابة", lang: "en-US" },
-  { id: "en-us-m", label: "جورج", desc: "أمريكي • ذكر • متوسط", lang: "en-US" },
+  { id: "ar-soft", label: "هادئ", desc: "عربي • ناعم • مريح", lang: "ar-SA", serverVoice: "nova" },
+  { id: "ar-warm", label: "دافئ", desc: "عربي • واضح • هادي", lang: "ar-SA", serverVoice: "shimmer" },
+  { id: "ar-clear", label: "واضح", desc: "عربي • سريع الفهم", lang: "ar-SA", serverVoice: "sage" },
 ];
 
-export const NAV_ITEMS = [
-  { label: "الرئيسية", href: "/", icon: "🏠" },
-  { label: "خدماتنا", href: "/services", icon: "⚙️" },
-  { label: "مشاريعنا", href: "/projects", icon: "📁" },
-  { label: "طلب عرض سعر", href: "/quote", icon: "💰" },
-  { label: "من نحن", href: "/about", icon: "ℹ️" },
-  { label: "تواصل معنا", href: "/contact", icon: "📞" },
-  { label: "المدونة", href: "/blog", icon: "📝" },
-  { label: "الشركاء", href: "/partners", icon: "🤝" },
-] as const;
+export const NAV_ITEMS: NavItem[] = [
+  { label: "مؤسسة الـعـزب", href: "https://linktr.ee/Alazab.co", icon: "📁", external: true },
+  { label: "Luxury Finishing", href: "https://luxury-finishing.alazab.com", icon: "🏛", external: true },
+  { label: "Brand Identity", href: "https://brand-identity.alazab.com", icon: "🏪", external: true },
+  { label: "UberFix", href: "https://uberfix.alazab.com", icon: "🛠", external: true },
+  { label: "Laban Alasfour", href: "https://laban-alasfour.alazab.com", icon: "📦", external: true },
+  { label: "طلب صيانة", href: "https://uberfix.shop/service-request", icon: "📝", external: true },
+  { label: "الشكاوى والمقترحات", href: "https://alazab.com/complaints", icon: "⚠️", external: true },
+  { label: "اتصال الطوارئ", href: "tel:0227047955", icon: "🚨", external: true },
+  { label: "تواصل معنا", href: "https://alazab.com/contact", icon: "☎️", external: true },
+];
