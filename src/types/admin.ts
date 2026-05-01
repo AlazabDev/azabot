@@ -7,6 +7,10 @@ export interface AdminStats {
   total?: number;
   uptime_seconds?: number;
   timestamp?: string;
+  daily?: { date: string; conversations: number; messages: number }[];
+  hourly?: { hour: number; count: number }[];
+  top_quick_replies?: { text: string; count: number }[];
+  avg_messages_per_conversation?: number;
 }
 
 export interface AdminSettings {
@@ -24,8 +28,21 @@ export interface AdminSettings {
   business_hours?: {
     start?: string;
     end?: string;
+    days?: number[];
+    timezone?: string;
   };
   offline_message: string;
+  // New: engine + Rasa
+  engine: "lovable" | "rasa";
+  rasa_url: string;
+  rasa_timeout_ms: number;
+  // New: UI enhancements
+  header_subtitle: string;
+  bubble_style: "modern" | "classic" | "compact";
+  show_branding: boolean;
+  sound_enabled: boolean;
+  allow_human_takeover: boolean;
+  avatar_url: string;
 }
 
 export interface ConversationSummary {
@@ -35,6 +52,11 @@ export interface ConversationSummary {
   channel?: string;
   message_count: number;
   last_message_at: string;
+  human_takeover?: boolean;
+  assigned_admin?: string | null;
+  visitor_name?: string | null;
+  visitor_email?: string | null;
+  status?: string;
 }
 
 export interface AdminUpload {
@@ -56,7 +78,7 @@ export interface AdminUpload {
 
 export interface ConversationMessage {
   id: string;
-  role: "user" | "assistant" | string;
+  role: "user" | "assistant" | "admin" | string;
   content: string;
   created_at: string;
   attachments?: AdminUpload[];
