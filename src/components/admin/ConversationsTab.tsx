@@ -37,7 +37,7 @@ export default function ConversationsTab() {
     const channel = supabase
       .channel("admin-conversations")
       .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, () => load())
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload: { new: ConversationMessage & { conversation_id: string } }) => {
         const newMsg = payload.new as ConversationMessage & { conversation_id: string };
         if (selected && newMsg.conversation_id === selected.id) {
           setMsgs((prev) => [...prev, newMsg]);
