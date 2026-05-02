@@ -81,24 +81,32 @@ Deno.serve(async (req) => {
     // ─── Engine: RASA ──────────────────────────────────────
     if (engine === "rasa") {
       const rasaUrl = String(settings?.rasa_url || "").trim();
-      if (!rasaUrl) return sseStatic("⚠️ لم يتم ضبط رابط سيرفر Rasa من لوحة الإدارة.");
+      if (!rasaUrl) {
+        await logRasa("error", null, "rasa.send", { session_id, message: lastUser?.content }, null, "", "rasa_url غير معرّف");
+        return sseStatic("⚠️ لم يتم ضبط رابط سيرفر Rasa من لوحة الإدارة.");
+      }
+      const startedAt = Date.now();
+      const target = rasaUrl.replace(/\/$/, "") + "/webhooks/rest/webhook";
+      const timeout = Number(settings?.rasa_timeout_ms || 15000);
+      const reqPayload = { sender: session_id || "anonymous", message: lastUser?.content || "" };
       try {
-        const target = rasaUrl.replace(/\/$/, "") + "/webhooks/rest/webhook";
-        const timeout = Number(settings?.rasa_timeout_ms || 15000);
         const res = await fetch(target, {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sender: session_id || "anonymous", message: lastUser?.content || "" }),
+          body: JSON.stringify(reqPayload),
           signal: AbortSignal.timeout(timeout),
         });
+        const respText = await res.text();
         if (!res.ok) {
-          const errTxt = await res.text();
-          console.error("Rasa error:", res.status, errTxt);
+          console.error("Rasa error:", res.status, respText);
+          await logRasa("failed", res.status, "rasa.send", { ...reqPayload, target, duration_ms: Date.now() - startedAt }, respText.slice(0, 2000), `HTTP ${res.status}`);
           return sseStatic(`⚠️ خطأ في الاتصال بسيرفر Rasa (${res.status}).`);
         }
-        const arr = await res.json();
-        // Rasa returns: [{recipient_id, text, image?, buttons?}]
+        let arr: unknown = [];
+        try { arr = JSON.parse(respText); } catch { /* ignore */ }
         const fullText = (Array.isArray(arr) ? arr : [])
           .map((m: { text?: string }) => m.text).filter(Boolean).join("\n\n") || "…";
+
+        await logRasa("success", res.status, "rasa.send", { ...reqPayload, target, duration_ms: Date.now() - startedAt }, respText.slice(0, 2000), "");
 
         if (conversationId) {
           await supabase.from("messages").insert({
@@ -111,9 +119,24 @@ Deno.serve(async (req) => {
         }
         return sseStatic(fullText);
       } catch (e) {
+        const msg = e instanceof Error ? e.message : "Unknown";
         console.error("Rasa fetch failed:", e);
-        return sseStatic(`⚠️ تعذر الاتصال بسيرفر Rasa: ${e instanceof Error ? e.message : "Unknown"}`);
+        await logRasa("failed", null, "rasa.send", { ...reqPayload, target, duration_ms: Date.now() - startedAt }, "", msg);
+        return sseStatic(`⚠️ تعذر الاتصال بسيرفر Rasa: ${msg}`);
       }
+    }
+
+    async function logRasa(
+      status: string, statusCode: number | null, event: string,
+      payload: Record<string, unknown>, responseBody: string, errorMessage: string,
+    ) {
+      try {
+        await supabase.from("webhook_logs").insert({
+          integration_id: null, integration_type: "rasa",
+          event, status, status_code: statusCode,
+          request_payload: payload, response_body: responseBody, error_message: errorMessage,
+        });
+      } catch (e) { console.error("logRasa failed:", e); }
     }
 
     // ─── Engine: LOVABLE AI (default) ──────────────────────

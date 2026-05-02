@@ -114,9 +114,38 @@ Deno.serve(async (req) => {
         return json({ ok: true });
       }
       case "list_logs": {
-        const { data } = await supabase.from("webhook_logs")
-          .select("*").order("created_at", { ascending: false }).limit(200);
+        const type = url.searchParams.get("type") || "";
+        const status = url.searchParams.get("status") || "";
+        const limit = Math.min(Number(url.searchParams.get("limit") || 200), 1000);
+        let q = supabase.from("webhook_logs").select("*")
+          .order("created_at", { ascending: false }).limit(limit);
+        if (type) q = q.eq("integration_type", type);
+        if (status) q = q.eq("status", status);
+        const { data } = await q;
         return json(data);
+      }
+      case "clear_logs": {
+        const type = (body.type as string) || "";
+        let q = supabase.from("webhook_logs").delete();
+        if (type) q = q.eq("integration_type", type);
+        else q = q.neq("id", "00000000-0000-0000-0000-000000000000");
+        const { error } = await q;
+        if (error) return json({ error: error.message }, 400);
+        return json({ ok: true });
+      }
+      case "change_password": {
+        const { current_password, new_password } = body as { current_password?: string; new_password?: string };
+        if (!new_password || new_password.length < 6)
+          return json({ error: "كلمة المرور الجديدة يجب أن تكون 6 أحرف فأكثر" }, 400);
+        const { verifyPassword, hashPassword } = await import("../_shared/jwt.ts");
+        const { data: row } = await supabase.from("admin_auth").select("password_hash").eq("id", 1).maybeSingle();
+        if (row?.password_hash) {
+          const ok = await verifyPassword(current_password || "", row.password_hash);
+          if (!ok) return json({ error: "كلمة المرور الحالية خاطئة" }, 401);
+        }
+        const hash = await hashPassword(new_password);
+        await supabase.from("admin_auth").update({ password_hash: hash, updated_at: new Date().toISOString() }).eq("id", 1);
+        return json({ ok: true });
       }
       case "stats": {
         const { count: convCount } = await supabase.from("conversations")
