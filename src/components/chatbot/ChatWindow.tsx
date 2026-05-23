@@ -217,7 +217,9 @@ export function ChatWindow({
           voiceRepliesEnabled={settings.voiceReplies}
           speakingMessageId={speakingId}
           onToggleSpeak={handleToggleSpeak}
+          onSuggestion={(t) => inputRef.current?.setText(t)}
         />
+
 
         <ChatInput
           ref={inputRef}

@@ -1,4 +1,4 @@
-import { Download, Settings as SettingsIcon, X } from "lucide-react";
+import { Download, Settings as SettingsIcon, Sparkles, X } from "lucide-react";
 import { useState } from "react";
 import type { ChatStatus, ExportFormat } from "@/types/chat";
 import { cn } from "@/lib/utils";
@@ -47,12 +47,20 @@ export function ChatHeader({
     >
       <div className="flex items-center gap-3">
         <div
-          className="flex h-10 w-10 items-center justify-center rounded-full text-[#030957] font-bold text-sm"
-          style={{ backgroundColor: "#ffb900" }}
+          className="relative flex h-10 w-10 items-center justify-center rounded-full shadow-md"
+          style={{
+            background: "linear-gradient(135deg, #ffb900 0%, #ffd166 100%)",
+            color: "#030957",
+          }}
           aria-hidden
         >
-          AZ
+          <Sparkles className="h-5 w-5" strokeWidth={2.4} />
+          <span
+            className="absolute -bottom-0.5 -left-0.5 h-3 w-3 rounded-full border-2 border-[#030957]"
+            style={{ backgroundColor: "#22c55e" }}
+          />
         </div>
+
         <div className="leading-tight">
           <div className="font-semibold">Azab Assistant</div>
           <div className="flex items-center gap-1.5 text-xs opacity-90">
