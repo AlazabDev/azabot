@@ -1,4 +1,4 @@
-import { Download, Settings as SettingsIcon, X } from "lucide-react";
+import { Download, Settings as SettingsIcon, Sparkles, X } from "lucide-react";
 import { useState } from "react";
 import type { ChatStatus, ExportFormat } from "@/types/chat";
 import { cn } from "@/lib/utils";
