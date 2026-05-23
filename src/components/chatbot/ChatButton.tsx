@@ -14,28 +14,32 @@ export function ChatButton({ isOpen, onClick }: ChatButtonProps) {
       aria-label={isOpen ? "إغلاق المساعد" : "فتح المساعد"}
       aria-expanded={isOpen}
       className={cn(
-        "fixed bottom-5 right-5 z-[9999] flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-[#ffb900]/40",
-        "sm:bottom-6 sm:right-6",
+        "fixed bottom-5 right-5 z-[9999] flex h-14 w-14 items-center justify-center rounded-full text-white transition-all duration-300 hover:scale-110 active:scale-95 focus:outline-none focus:ring-4 focus:ring-[#ffb900]/40 sm:bottom-6 sm:right-6",
+        !isOpen && "azab-float-pulse",
       )}
       style={{
-        backgroundColor: isOpen ? "#030957" : "#030957",
-        boxShadow: "var(--azab-shadow)",
+        background: isOpen
+          ? "linear-gradient(135deg, #1a2280 0%, #030957 100%)"
+          : "linear-gradient(135deg, #030957 0%, #1a2280 100%)",
       }}
     >
-      <span
-        className="absolute inset-0 rounded-full"
-        style={{
-          background:
-            "linear-gradient(135deg, #030957 0%, #1a2280 100%)",
-        }}
-        aria-hidden
-      />
-      <span className="relative">
-        {isOpen ? (
+      <span className="relative flex items-center justify-center">
+        <span
+          className={cn(
+            "absolute transition-all duration-300",
+            isOpen ? "rotate-0 opacity-100 scale-100" : "rotate-90 opacity-0 scale-50",
+          )}
+        >
           <X className="h-6 w-6" strokeWidth={2.5} />
-        ) : (
+        </span>
+        <span
+          className={cn(
+            "transition-all duration-300",
+            isOpen ? "-rotate-90 opacity-0 scale-50" : "rotate-0 opacity-100 scale-100",
+          )}
+        >
           <MessageCircle className="h-6 w-6" strokeWidth={2.2} />
-        )}
+        </span>
       </span>
       {!isOpen && (
         <span
