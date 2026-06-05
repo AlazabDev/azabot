@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChatbotWidget } from "@/components/chatbot/ChatbotWidget";
 
 export const Route = createFileRoute("/")({
