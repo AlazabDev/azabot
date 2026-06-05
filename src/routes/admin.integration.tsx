@@ -26,16 +26,73 @@ function IntegrationPage() {
   const [showKey, setShowKey] = useState(false);
   const [saved, setSaved] = useState(false);
   const [test, setTest] = useState<TestState>({ status: "idle" });
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [touched, setTouched] = useState<Partial<Record<keyof AzureOpenAIConfig, boolean>>>({});
 
   useEffect(() => {
     setCfg(loadAzureConfig());
   }, []);
 
-  const update = <K extends keyof AzureOpenAIConfig>(key: K, value: AzureOpenAIConfig[K]) =>
-    setCfg((c) => ({ ...c, [key]: value }));
+  const validate = (draft: AzureOpenAIConfig): FieldErrors => {
+    const next: FieldErrors = {};
+
+    // Endpoint
+    const ep = draft.endpoint.trim();
+    if (!ep) {
+      next.endpoint = "مطلوب";
+    } else if (!/^https?:\/\/.+/i.test(ep)) {
+      next.endpoint = "يجب أن يبدأ بـ https:// أو http://";
+    } else if (!/^https?:\/\/[^\s]+\.openai\.azure\.com\/?.*$/i.test(ep) && !/^https?:\/\/[^\s]+$/i.test(ep)) {
+      // Allow any https endpoint but warn if not azure-like
+      // We keep this loose since custom domains exist
+    }
+
+    // Deployment
+    if (!draft.deployment.trim()) {
+      next.deployment = "مطلوب";
+    } else if (!/^[a-zA-Z0-9_-]+$/.test(draft.deployment.trim())) {
+      next.deployment = "يحتوي على رموز غير مسموح بها";
+    }
+
+    // API Version
+    if (!draft.apiVersion.trim()) {
+      next.apiVersion = "مطلوب";
+    } else if (!/^\d{4}-\d{2}-\d{2}(-preview)?$/.test(draft.apiVersion.trim())) {
+      next.apiVersion = "التنسيق المتوقع: YYYY-MM-DD أو YYYY-MM-DD-preview";
+    }
+
+    // System Prompt
+    if (!draft.systemPrompt.trim()) {
+      next.systemPrompt = "مطلوب";
+    } else if (draft.systemPrompt.trim().length < 10) {
+      next.systemPrompt = "يجب أن يكون 10 أحرف على الأقل";
+    }
+
+    return next;
+  };
+
+  const update = <K extends keyof AzureOpenAIConfig>(key: K, value: AzureOpenAIConfig[K]) => {
+    setCfg((c) => {
+      const next = { ...c, [key]: value };
+      setErrors(validate(next));
+      return next;
+    });
+    setTouched((t) => ({ ...t, [key]: true }));
+  };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    const allTouched: Partial<Record<keyof AzureOpenAIConfig, boolean>> = {
+      endpoint: true,
+      deployment: true,
+      apiVersion: true,
+      systemPrompt: true,
+    };
+    setTouched(allTouched);
+    const nextErrors = validate(cfg);
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
     saveAzureConfig(cfg);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
