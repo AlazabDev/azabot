@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChatbotWidget } from "@/components/chatbot/ChatbotWidget";
 
 export const Route = createFileRoute("/")({
@@ -37,6 +37,12 @@ function Index() {
           والإنجليزية، إرفاق الملفات، التحويل الصوتي، وتحميل المحادثة بصيغ
           مختلفة.
         </p>
+        <Link
+          to="/admin"
+          className="mt-6 inline-flex items-center gap-2 rounded-lg bg-[#030957] px-4 py-2 text-sm font-semibold text-white hover:bg-[#030957]/90"
+        >
+          فتح لوحة الإدارة ←
+        </Link>
       </main>
 
       <ChatbotWidget />
