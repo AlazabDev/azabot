@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Eye, EyeOff, Save, Wifi, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Save, Wifi, CheckCircle2, XCircle, Loader2, AlertCircle } from "lucide-react";
 import {
   DEFAULT_AZURE_CONFIG,
   loadAzureConfig,
@@ -18,6 +18,8 @@ type TestState =
   | { status: "loading" }
   | { status: "ok"; message: string }
   | { status: "error"; message: string };
+
+type FieldErrors = Partial<Record<keyof AzureOpenAIConfig, string>>;
 
 function IntegrationPage() {
   const [cfg, setCfg] = useState<AzureOpenAIConfig>(DEFAULT_AZURE_CONFIG);
