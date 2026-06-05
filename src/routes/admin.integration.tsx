@@ -159,14 +159,15 @@ function IntegrationPage() {
           />
         </label>
 
-        <Field label="Endpoint" hint="مثال: https://my-resource.openai.azure.com">
+        <Field label="Endpoint" hint="مثال: https://my-resource.openai.azure.com" error={touched.endpoint ? errors.endpoint : undefined}>
           <input
             type="url"
             required
             value={cfg.endpoint}
             onChange={(e) => update("endpoint", e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, endpoint: true }))}
             placeholder="https://YOUR-RESOURCE.openai.azure.com"
-            className="azab-input"
+            className={`azab-input ${touched.endpoint && errors.endpoint ? "border-red-400 focus:border-red-400 focus:shadow-red-200" : ""}`}
           />
         </Field>
 
