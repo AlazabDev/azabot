@@ -244,12 +244,14 @@ function IntegrationPage() {
         <Field
           label="System Prompt"
           hint="التعليمات الأساسية التي ستوجه سلوك البوت في كل محادثة."
+          error={touched.systemPrompt ? errors.systemPrompt : undefined}
         >
           <textarea
             value={cfg.systemPrompt}
             onChange={(e) => update("systemPrompt", e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, systemPrompt: true }))}
             rows={5}
-            className="azab-input resize-y"
+            className={`azab-input resize-y ${touched.systemPrompt && errors.systemPrompt ? "border-red-400 focus:border-red-400 focus:shadow-red-200" : ""}`}
           />
         </Field>
 
