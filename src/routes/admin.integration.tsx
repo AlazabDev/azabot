@@ -99,6 +99,20 @@ function IntegrationPage() {
   };
 
   const handleTest = async () => {
+    const allTouched: Partial<Record<keyof AzureOpenAIConfig, boolean>> = {
+      endpoint: true,
+      deployment: true,
+      apiVersion: true,
+      systemPrompt: true,
+    };
+    setTouched(allTouched);
+    const nextErrors = validate(cfg);
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      setTest({ status: "error", message: "يرجى تصحيح الأخطاء أولاً" });
+      return;
+    }
+
     setTest({ status: "loading" });
     try {
       const res = await testAzureConnection({
