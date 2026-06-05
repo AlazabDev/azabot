@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Eye, EyeOff, Save, Wifi, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Save, Wifi, CheckCircle2, XCircle, Loader2, AlertCircle } from "lucide-react";
 import {
   DEFAULT_AZURE_CONFIG,
   loadAzureConfig,
@@ -19,27 +19,100 @@ type TestState =
   | { status: "ok"; message: string }
   | { status: "error"; message: string };
 
+type FieldErrors = Partial<Record<keyof AzureOpenAIConfig, string>>;
+
 function IntegrationPage() {
   const [cfg, setCfg] = useState<AzureOpenAIConfig>(DEFAULT_AZURE_CONFIG);
   const [showKey, setShowKey] = useState(false);
   const [saved, setSaved] = useState(false);
   const [test, setTest] = useState<TestState>({ status: "idle" });
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [touched, setTouched] = useState<Partial<Record<keyof AzureOpenAIConfig, boolean>>>({});
 
   useEffect(() => {
     setCfg(loadAzureConfig());
   }, []);
 
-  const update = <K extends keyof AzureOpenAIConfig>(key: K, value: AzureOpenAIConfig[K]) =>
-    setCfg((c) => ({ ...c, [key]: value }));
+  const validate = (draft: AzureOpenAIConfig): FieldErrors => {
+    const next: FieldErrors = {};
+
+    // Endpoint
+    const ep = draft.endpoint.trim();
+    if (!ep) {
+      next.endpoint = "مطلوب";
+    } else if (!/^https?:\/\/.+/i.test(ep)) {
+      next.endpoint = "يجب أن يبدأ بـ https:// أو http://";
+    } else if (!/^https?:\/\/[^\s]+\.openai\.azure\.com\/?.*$/i.test(ep) && !/^https?:\/\/[^\s]+$/i.test(ep)) {
+      // Allow any https endpoint but warn if not azure-like
+      // We keep this loose since custom domains exist
+    }
+
+    // Deployment
+    if (!draft.deployment.trim()) {
+      next.deployment = "مطلوب";
+    } else if (!/^[a-zA-Z0-9_-]+$/.test(draft.deployment.trim())) {
+      next.deployment = "يحتوي على رموز غير مسموح بها";
+    }
+
+    // API Version
+    if (!draft.apiVersion.trim()) {
+      next.apiVersion = "مطلوب";
+    } else if (!/^\d{4}-\d{2}-\d{2}(-preview)?$/.test(draft.apiVersion.trim())) {
+      next.apiVersion = "التنسيق المتوقع: YYYY-MM-DD أو YYYY-MM-DD-preview";
+    }
+
+    // System Prompt
+    if (!draft.systemPrompt.trim()) {
+      next.systemPrompt = "مطلوب";
+    } else if (draft.systemPrompt.trim().length < 10) {
+      next.systemPrompt = "يجب أن يكون 10 أحرف على الأقل";
+    }
+
+    return next;
+  };
+
+  const update = <K extends keyof AzureOpenAIConfig>(key: K, value: AzureOpenAIConfig[K]) => {
+    setCfg((c) => {
+      const next = { ...c, [key]: value };
+      setErrors(validate(next));
+      return next;
+    });
+    setTouched((t) => ({ ...t, [key]: true }));
+  };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    const allTouched: Partial<Record<keyof AzureOpenAIConfig, boolean>> = {
+      endpoint: true,
+      deployment: true,
+      apiVersion: true,
+      systemPrompt: true,
+    };
+    setTouched(allTouched);
+    const nextErrors = validate(cfg);
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
     saveAzureConfig(cfg);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
 
   const handleTest = async () => {
+    const allTouched: Partial<Record<keyof AzureOpenAIConfig, boolean>> = {
+      endpoint: true,
+      deployment: true,
+      apiVersion: true,
+      systemPrompt: true,
+    };
+    setTouched(allTouched);
+    const nextErrors = validate(cfg);
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      setTest({ status: "error", message: "يرجى تصحيح الأخطاء أولاً" });
+      return;
+    }
+
     setTest({ status: "loading" });
     try {
       const res = await testAzureConnection({
@@ -86,14 +159,15 @@ function IntegrationPage() {
           />
         </label>
 
-        <Field label="Endpoint" hint="مثال: https://my-resource.openai.azure.com">
+        <Field label="Endpoint" hint="مثال: https://my-resource.openai.azure.com" error={touched.endpoint ? errors.endpoint : undefined}>
           <input
             type="url"
             required
             value={cfg.endpoint}
             onChange={(e) => update("endpoint", e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, endpoint: true }))}
             placeholder="https://YOUR-RESOURCE.openai.azure.com"
-            className="azab-input"
+            className={`azab-input ${touched.endpoint && errors.endpoint ? "border-red-400 focus:border-red-400 focus:shadow-red-200" : ""}`}
           />
         </Field>
 
@@ -120,23 +194,25 @@ function IntegrationPage() {
         </Field>
 
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Deployment Name" hint="اسم النشر داخل Azure">
+          <Field label="Deployment Name" hint="اسم النشر داخل Azure" error={touched.deployment ? errors.deployment : undefined}>
             <input
               type="text"
               required
               value={cfg.deployment}
               onChange={(e) => update("deployment", e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, deployment: true }))}
               placeholder="gpt-4o-mini"
-              className="azab-input"
+              className={`azab-input ${touched.deployment && errors.deployment ? "border-red-400 focus:border-red-400 focus:shadow-red-200" : ""}`}
             />
           </Field>
-          <Field label="API Version">
+          <Field label="API Version" error={touched.apiVersion ? errors.apiVersion : undefined}>
             <input
               type="text"
               value={cfg.apiVersion}
               onChange={(e) => update("apiVersion", e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, apiVersion: true }))}
               placeholder="2024-08-01-preview"
-              className="azab-input"
+              className={`azab-input ${touched.apiVersion && errors.apiVersion ? "border-red-400 focus:border-red-400 focus:shadow-red-200" : ""}`}
             />
           </Field>
         </div>
@@ -168,12 +244,14 @@ function IntegrationPage() {
         <Field
           label="System Prompt"
           hint="التعليمات الأساسية التي ستوجه سلوك البوت في كل محادثة."
+          error={touched.systemPrompt ? errors.systemPrompt : undefined}
         >
           <textarea
             value={cfg.systemPrompt}
             onChange={(e) => update("systemPrompt", e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, systemPrompt: true }))}
             rows={5}
-            className="azab-input resize-y"
+            className={`azab-input resize-y ${touched.systemPrompt && errors.systemPrompt ? "border-red-400 focus:border-red-400 focus:shadow-red-200" : ""}`}
           />
         </Field>
 
@@ -244,17 +322,25 @@ function IntegrationPage() {
 function Field({
   label,
   hint,
+  error,
   children,
 }: {
   label: string;
   hint?: string;
+  error?: string;
   children: React.ReactNode;
 }) {
   return (
     <div>
       <label className="mb-1.5 block text-sm font-semibold text-[#030957]">{label}</label>
       {children}
-      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+      {error && (
+        <p className="mt-1 flex items-center gap-1 text-xs text-red-600">
+          <AlertCircle className="h-3 w-3" />
+          {error}
+        </p>
+      )}
+      {!error && hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
 }
