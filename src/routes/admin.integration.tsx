@@ -317,17 +317,25 @@ function IntegrationPage() {
 function Field({
   label,
   hint,
+  error,
   children,
 }: {
   label: string;
   hint?: string;
+  error?: string;
   children: React.ReactNode;
 }) {
   return (
     <div>
       <label className="mb-1.5 block text-sm font-semibold text-[#030957]">{label}</label>
       {children}
-      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+      {error && (
+        <p className="mt-1 flex items-center gap-1 text-xs text-red-600">
+          <AlertCircle className="h-3 w-3" />
+          {error}
+        </p>
+      )}
+      {!error && hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
 }
