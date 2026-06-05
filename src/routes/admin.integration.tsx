@@ -194,23 +194,25 @@ function IntegrationPage() {
         </Field>
 
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Deployment Name" hint="اسم النشر داخل Azure">
+          <Field label="Deployment Name" hint="اسم النشر داخل Azure" error={touched.deployment ? errors.deployment : undefined}>
             <input
               type="text"
               required
               value={cfg.deployment}
               onChange={(e) => update("deployment", e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, deployment: true }))}
               placeholder="gpt-4o-mini"
-              className="azab-input"
+              className={`azab-input ${touched.deployment && errors.deployment ? "border-red-400 focus:border-red-400 focus:shadow-red-200" : ""}`}
             />
           </Field>
-          <Field label="API Version">
+          <Field label="API Version" error={touched.apiVersion ? errors.apiVersion : undefined}>
             <input
               type="text"
               value={cfg.apiVersion}
               onChange={(e) => update("apiVersion", e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, apiVersion: true }))}
               placeholder="2024-08-01-preview"
-              className="azab-input"
+              className={`azab-input ${touched.apiVersion && errors.apiVersion ? "border-red-400 focus:border-red-400 focus:shadow-red-200" : ""}`}
             />
           </Field>
         </div>
