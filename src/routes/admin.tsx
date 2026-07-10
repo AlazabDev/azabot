@@ -1,9 +1,25 @@
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router";
 import { LayoutDashboard, Plug, GraduationCap, ArrowLeft } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/admin")({
+  ssr: false,
+  beforeLoad: async () => {
+    const { data: userData, error: userErr } = await supabase.auth.getUser();
+    if (userErr || !userData.user) {
+      throw redirect({ to: "/" });
+    }
+    const { data: isAdmin, error: roleErr } = await supabase.rpc("has_role", {
+      _user_id: userData.user.id,
+      _role: "admin",
+    });
+    if (roleErr || !isAdmin) {
+      throw redirect({ to: "/" });
+    }
+  },
   component: AdminLayout,
 });
+
 
 const navItems = [
   { to: "/admin", label: "لوحة التحكم", icon: LayoutDashboard, exact: true },
