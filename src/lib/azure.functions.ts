@@ -15,6 +15,26 @@ interface AzureRequestData {
   messages: AzureMessage[];
 }
 
+const ALLOWED_ENDPOINT_HOST_SUFFIXES = [".openai.azure.com", ".cognitiveservices.azure.com"];
+
+function assertAllowedEndpoint(endpoint: string): URL {
+  let url: URL;
+  try {
+    url = new URL(endpoint);
+  } catch {
+    throw new Error("Endpoint غير صالح.");
+  }
+  if (url.protocol !== "https:") {
+    throw new Error("Endpoint يجب أن يستخدم HTTPS.");
+  }
+  const host = url.hostname.toLowerCase();
+  const ok = ALLOWED_ENDPOINT_HOST_SUFFIXES.some((s) => host.endsWith(s));
+  if (!ok) {
+    throw new Error("Endpoint غير مسموح: يجب أن يكون مورد Azure OpenAI رسمي.");
+  }
+  return url;
+}
+
 export const callAzureOpenAI = createServerFn({ method: "POST" })
   .inputValidator((data: AzureRequestData) => data)
   .handler(async ({ data }) => {
@@ -31,8 +51,8 @@ export const callAzureOpenAI = createServerFn({ method: "POST" })
     if (!endpoint || !apiKey || !deployment) {
       throw new Error("الإعدادات غير مكتملة: endpoint و apiKey و deployment مطلوبة.");
     }
+    const base = assertAllowedEndpoint(endpoint).toString().replace(/\/+$/, "");
 
-    const base = endpoint.replace(/\/+$/, "");
     const url = `${base}/openai/deployments/${encodeURIComponent(
       deployment,
     )}/chat/completions?api-version=${encodeURIComponent(apiVersion)}`;
