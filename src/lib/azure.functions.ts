@@ -86,7 +86,7 @@ export const callAzureOpenAI = createServerFn({ method: "POST" })
 export const testAzureConnection = createServerFn({ method: "POST" })
   .inputValidator((data: Omit<AzureRequestData, "messages" | "temperature" | "maxTokens">) => data)
   .handler(async ({ data }) => {
-    const base = data.endpoint.replace(/\/+$/, "");
+    const base = assertAllowedEndpoint(data.endpoint).toString().replace(/\/+$/, "");
     const url = `${base}/openai/deployments/${encodeURIComponent(
       data.deployment,
     )}/chat/completions?api-version=${encodeURIComponent(data.apiVersion)}`;
