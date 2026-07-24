@@ -19,6 +19,7 @@ import { ChatHeader } from "./ChatHeader";
 import { ChatMessages } from "./ChatMessages";
 import { ChatInput, type ChatInputHandle } from "./ChatInput";
 import { ChatSettings } from "./ChatSettings";
+import { VoiceCall } from "./VoiceCall";
 
 interface ChatWindowProps {
   open: boolean;
@@ -46,6 +47,7 @@ export function ChatWindow({
   const [isListening, setIsListening] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [speakingId, setSpeakingId] = useState<string | null>(null);
+  const [callOpen, setCallOpen] = useState(false);
 
   const inputRef = useRef<ChatInputHandle>(null);
   const recognitionRef = useRef<ReturnType<typeof getSpeechRecognition>>(null);
@@ -198,6 +200,7 @@ export function ChatWindow({
         onClose={onClose}
         onDownload={handleDownload}
         onToggleSettings={() => setSettingsOpen((v) => !v)}
+        onStartCall={() => setCallOpen(true)}
         defaultExportFormat={settings.exportFormat}
       />
 
@@ -228,6 +231,14 @@ export function ChatWindow({
           voiceSupported={voiceSupported}
           onSend={handleSend}
           onToggleVoice={handleToggleVoice}
+        />
+
+        <VoiceCall
+          open={callOpen}
+          conversationId={conversationId}
+          onConversationId={setConversationId}
+          onTranscript={(m) => setMessages((prev) => [...prev, m])}
+          onClose={() => setCallOpen(false)}
         />
       </div>
     </div>

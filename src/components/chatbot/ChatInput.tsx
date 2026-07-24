@@ -5,7 +5,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Paperclip, Send } from "lucide-react";
+import { Camera, Paperclip, Send } from "lucide-react";
 import type { ChatFile } from "@/types/chat";
 import { fileToChatFile } from "@/lib/chatApi";
 import { FileAttachmentPreview } from "./FileAttachmentPreview";
@@ -52,6 +52,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const [error, setError] = useState<string | null>(null);
     const taRef = useRef<HTMLTextAreaElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+    const cameraRef = useRef<HTMLInputElement>(null);
 
     useImperativeHandle(ref, () => ({
       setText: (t: string) => setText(t),
@@ -101,6 +102,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       setRawFiles((prev) => [...prev, ...accepted]);
       setFiles((prev) => [...prev, ...newChatFiles]);
       if (inputRef.current) inputRef.current.value = "";
+      if (cameraRef.current) cameraRef.current.value = "";
     };
 
     const removeFile = (id: string) => {
@@ -132,6 +134,14 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             className="hidden"
             onChange={(e) => handleFiles(e.target.files)}
           />
+          <input
+            ref={cameraRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => handleFiles(e.target.files)}
+          />
 
           <div className="flex items-end gap-1.5 rounded-2xl border border-black/10 bg-[#f8f9fc] px-2 py-1.5 transition focus-within:border-[#ffb900] focus-within:bg-white focus-within:shadow-[0_0_0_3px_rgba(255,185,0,0.15)]">
             <button
@@ -141,6 +151,14 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#030957]/70 transition hover:bg-[#030957]/5 hover:text-[#030957] focus:outline-none focus:ring-2 focus:ring-[#ffb900]"
             >
               <Paperclip className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => cameraRef.current?.click()}
+              aria-label="التقاط صورة بالكاميرا"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#030957]/70 transition hover:bg-[#030957]/5 hover:text-[#030957] focus:outline-none focus:ring-2 focus:ring-[#ffb900]"
+            >
+              <Camera className="h-4 w-4" />
             </button>
 
             <VoiceControls
