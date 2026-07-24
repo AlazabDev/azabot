@@ -1,4 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+
+async function assertAdmin(context: { supabase: any; userId: string }) {
+  const { data, error } = await context.supabase.rpc("has_role", {
+    _user_id: context.userId,
+    _role: "admin",
+  });
+  if (error || !data) {
+    throw new Error("Forbidden: admin role required.");
+  }
+}
 
 interface AzureMessage {
   role: "system" | "user" | "assistant";
@@ -36,8 +47,10 @@ function assertAllowedEndpoint(endpoint: string): URL {
 }
 
 export const callAzureOpenAI = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data: AzureRequestData) => data)
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
     const {
       endpoint,
       apiKey,
@@ -84,8 +97,10 @@ export const callAzureOpenAI = createServerFn({ method: "POST" })
   });
 
 export const testAzureConnection = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data: Omit<AzureRequestData, "messages" | "temperature" | "maxTokens">) => data)
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
     const base = assertAllowedEndpoint(data.endpoint).toString().replace(/\/+$/, "");
     const url = `${base}/openai/deployments/${encodeURIComponent(
       data.deployment,
