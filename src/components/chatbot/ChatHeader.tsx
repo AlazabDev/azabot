@@ -1,4 +1,4 @@
-import { Download, Settings as SettingsIcon, Sparkles, X } from "lucide-react";
+import { Download, Phone, Settings as SettingsIcon, Sparkles, X } from "lucide-react";
 import { useState } from "react";
 import type { ChatStatus, ExportFormat } from "@/types/chat";
 import { cn } from "@/lib/utils";
@@ -8,6 +8,7 @@ interface ChatHeaderProps {
   onClose: () => void;
   onDownload: (format: ExportFormat) => void;
   onToggleSettings: () => void;
+  onStartCall: () => void;
   defaultExportFormat: ExportFormat;
 }
 
