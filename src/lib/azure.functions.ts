@@ -47,8 +47,10 @@ function assertAllowedEndpoint(endpoint: string): URL {
 }
 
 export const callAzureOpenAI = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data: AzureRequestData) => data)
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
     const {
       endpoint,
       apiKey,
