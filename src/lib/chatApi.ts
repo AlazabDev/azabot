@@ -3,6 +3,10 @@ import type {
   ChatApiResponse,
   ChatFile,
 } from "@/types/chat";
+import { supabase } from "@/integrations/supabase/client";
+import { foundryChat } from "@/lib/foundry.functions";
+
+const BUCKET = "chatbot-uploads";
 
 export interface SendMessageArgs {
   message: string;
@@ -10,59 +14,79 @@ export interface SendMessageArgs {
   files: File[];
   metadata: ChatApiRequestMeta;
   signal?: AbortSignal;
-  endpoint?: string;
+  systemPrompt?: string;
+}
+
+interface UploadedAttachment {
+  url: string;
+  path: string;
+  name: string;
+  type: string;
+  size: number;
+}
+
+async function uploadFile(
+  file: File,
+  conversationId: string,
+): Promise<UploadedAttachment> {
+  const safe = file.name.replace(/[^\w.\-()\s]/g, "_");
+  const path = `${conversationId}/${crypto.randomUUID()}-${safe}`;
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (error) throw new Error(`فشل رفع ${file.name}: ${error.message}`);
+
+  const { data: signed, error: signErr } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUrl(path, 60 * 60 * 24);
+  if (signErr || !signed) throw new Error(`تعذر إنشاء رابط للملف ${file.name}`);
+
+  return {
+    url: signed.signedUrl,
+    path,
+    name: file.name,
+    type: file.type,
+    size: file.size,
+  };
 }
 
 /**
- * Sends a chat message (and optional files) to the backend.
- * Falls back to a simulated reply when the endpoint is unavailable so the
- * widget remains usable in development.
+ * Sends a chat message + files to Microsoft Foundry Agent (Threads API).
+ * conversationId is stored as the Foundry thread_id.
  */
 export async function sendChatMessage({
   message,
   conversationId,
   files,
-  metadata,
-  signal,
-  endpoint = "/api/chat",
+  systemPrompt,
 }: SendMessageArgs): Promise<ChatApiResponse> {
-  const formData = new FormData();
-  formData.append("message", message);
-  formData.append("conversationId", conversationId);
-  formData.append("metadata", JSON.stringify(metadata));
-  files.forEach((file) => formData.append("files", file, file.name));
-
-  try {
-    const res = await fetch(endpoint, {
-      method: "POST",
-      body: formData,
-      signal,
-    });
-
-    if (!res.ok) {
-      throw new Error(`Request failed with status ${res.status}`);
-    }
-
-    const data = (await res.json()) as ChatApiResponse;
-    return data;
-  } catch (err) {
-    if ((err as Error).name === "AbortError") throw err;
-    // Graceful local fallback so the widget still demonstrates flow.
-    return simulateReply(message, conversationId, metadata.language);
+  const attachments: UploadedAttachment[] = [];
+  for (const f of files) {
+    attachments.push(await uploadFile(f, conversationId || "anon"));
   }
-}
 
-async function simulateReply(
-  message: string,
-  conversationId: string,
-  language: "ar" | "en",
-): Promise<ChatApiResponse> {
-  await new Promise((r) => setTimeout(r, 700));
-  const reply =
-    language === "ar"
-      ? `تم استلام رسالتك: "${message}". هذا رد تجريبي محلي لأن الـ API غير متصل.`
-      : `Received: "${message}". This is a local fallback reply (API offline).`;
-  return { reply, conversationId, sources: [], actions: [] };
+  const threadId =
+    conversationId && conversationId.startsWith("thread_") ? conversationId : null;
+
+  const res = await foundryChat({
+    data: {
+      threadId,
+      message,
+      attachments: attachments.map((a) => ({
+        url: a.url,
+        name: a.name,
+        type: a.type,
+      })),
+      systemPrompt,
+    },
+  });
+
+  return {
+    reply: res.reply || "…",
+    conversationId: res.threadId,
+    sources: [],
+    actions: [],
+  };
 }
 
 export function fileToChatFile(file: File): Promise<ChatFile> {

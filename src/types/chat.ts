@@ -9,6 +9,10 @@ export interface ChatFile {
   type: string;
   /** Optional data URL for previewing images locally. */
   dataUrl?: string;
+  /** Remote (Supabase) URL after upload. */
+  url?: string;
+  /** Storage path within the bucket. */
+  path?: string;
 }
 
 export interface ChatMessage {
