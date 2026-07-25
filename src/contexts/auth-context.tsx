@@ -1,8 +1,14 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 
 import { supabase } from "@/lib/supabase/client";
-import { clearSessionSnapshot, persistSessionSnapshot, readSupabaseSession, type SessionSnapshot } from "@/lib/supabase/session";
+import {
+  clearSessionSnapshot,
+  loadSessionSnapshot,
+  persistSessionSnapshot,
+  readSupabaseSession,
+  type SessionSnapshot,
+} from "@/lib/supabase/session";
 import type { AppRole } from "@/lib/auth/roles";
 import { isAppRole } from "@/lib/auth/roles";
 
@@ -40,12 +46,10 @@ async function resolveRole(user: User | null): Promise<AppRole | null> {
   return null;
 }
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [snapshot, setSnapshot] = useState<SessionSnapshot>(() => ({
-    session: null,
-    user: null,
-    hydratedAt: Date.now(),
-  }));
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [snapshot, setSnapshot] = useState<SessionSnapshot>(
+    () => loadSessionSnapshot() ?? { session: null, user: null, hydratedAt: Date.now() },
+  );
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -57,12 +61,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    let mounted = true;
+    let alive = true;
 
     (async () => {
-      const cached = typeof window !== "undefined" ? null : null;
-      void cached;
-      if (!mounted) return;
+      if (!alive) return;
       await syncSnapshot();
       setLoading(false);
     })();
@@ -84,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => {
-      mounted = false;
+      alive = false;
       data.subscription.unsubscribe();
     };
   }, []);
