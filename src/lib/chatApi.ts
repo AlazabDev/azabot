@@ -5,6 +5,7 @@ import type {
 } from "@/types/chat";
 import { supabase } from "@/integrations/supabase/client";
 import { foundryChat } from "@/lib/foundry.functions";
+import { getChatUploadSignedUrl } from "@/lib/chatUploads.functions";
 
 const BUCKET = "chatbot-uploads";
 
@@ -14,7 +15,6 @@ export interface SendMessageArgs {
   files: File[];
   metadata: ChatApiRequestMeta;
   signal?: AbortSignal;
-  systemPrompt?: string;
 }
 
 interface UploadedAttachment {
@@ -27,22 +27,20 @@ interface UploadedAttachment {
 
 async function uploadFile(
   file: File,
-  conversationId: string,
+  scope: string,
 ): Promise<UploadedAttachment> {
   const safe = file.name.replace(/[^\w.\-()\s]/g, "_");
-  const path = `${conversationId}/${crypto.randomUUID()}-${safe}`;
+  const path = `${scope}/${crypto.randomUUID()}-${safe}`;
   const { error } = await supabase.storage
     .from(BUCKET)
     .upload(path, file, { contentType: file.type, upsert: false });
-  if (error) throw new Error(`فشل رفع ${file.name}: ${error.message}`);
+  if (error) throw new Error(`فشل رفع ${file.name}`);
 
-  const { data: signed, error: signErr } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUrl(path, 60 * 60 * 24);
-  if (signErr || !signed) throw new Error(`تعذر إنشاء رابط للملف ${file.name}`);
+  // Signed URLs are minted server-side; the bucket has no public SELECT.
+  const signed = await getChatUploadSignedUrl({ data: { path } });
 
   return {
-    url: signed.signedUrl,
+    url: signed.url,
     path,
     name: file.name,
     type: file.type,
@@ -51,22 +49,25 @@ async function uploadFile(
 }
 
 /**
- * Sends a chat message + files to Microsoft Foundry Agent (Threads API).
- * conversationId is stored as the Foundry thread_id.
+ * Sends a chat message + files to the Foundry-backed server function.
+ * conversationId is an HMAC-signed thread token issued by the server;
+ * clients cannot forge or reuse other visitors' thread IDs.
  */
 export async function sendChatMessage({
   message,
   conversationId,
   files,
-  systemPrompt,
 }: SendMessageArgs): Promise<ChatApiResponse> {
   const attachments: UploadedAttachment[] = [];
+  // Upload scope is a random per-request folder so paths aren't guessable.
+  const scope = crypto.randomUUID();
   for (const f of files) {
-    attachments.push(await uploadFile(f, conversationId || "anon"));
+    attachments.push(await uploadFile(f, scope));
   }
 
+  // Only forward tokens issued by our own server (contain a signature ".").
   const threadId =
-    conversationId && conversationId.startsWith("thread_") ? conversationId : null;
+    conversationId && conversationId.includes(".") ? conversationId : null;
 
   const res = await foundryChat({
     data: {
@@ -77,7 +78,6 @@ export async function sendChatMessage({
         name: a.name,
         type: a.type,
       })),
-      systemPrompt,
     },
   });
 
