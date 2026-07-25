@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -14,7 +15,7 @@ interface SidebarProps {
   title: string;
   subtitle?: string;
   items: SidebarItem[];
-  footer?: React.ReactNode;
+  footer?: ReactNode;
   className?: string;
 }
 
