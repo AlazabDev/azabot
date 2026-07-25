@@ -13,6 +13,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminTrainingRouteImport } from './routes/admin.training'
+import { Route as AdminKnowledgeRouteImport } from './routes/admin.knowledge'
 import { Route as AdminIntegrationRouteImport } from './routes/admin.integration'
 
 const AdminRoute = AdminRouteImport.update({
@@ -35,6 +36,11 @@ const AdminTrainingRoute = AdminTrainingRouteImport.update({
   path: '/training',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminKnowledgeRoute = AdminKnowledgeRouteImport.update({
+  id: '/knowledge',
+  path: '/knowledge',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminIntegrationRoute = AdminIntegrationRouteImport.update({
   id: '/integration',
   path: '/integration',
@@ -45,12 +51,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/admin/integration': typeof AdminIntegrationRoute
+  '/admin/knowledge': typeof AdminKnowledgeRoute
   '/admin/training': typeof AdminTrainingRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin/integration': typeof AdminIntegrationRoute
+  '/admin/knowledge': typeof AdminKnowledgeRoute
   '/admin/training': typeof AdminTrainingRoute
   '/admin': typeof AdminIndexRoute
 }
@@ -59,6 +67,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/admin/integration': typeof AdminIntegrationRoute
+  '/admin/knowledge': typeof AdminKnowledgeRoute
   '/admin/training': typeof AdminTrainingRoute
   '/admin/': typeof AdminIndexRoute
 }
@@ -68,15 +77,22 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/admin/integration'
+    | '/admin/knowledge'
     | '/admin/training'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin/integration' | '/admin/training' | '/admin'
+  to:
+    | '/'
+    | '/admin/integration'
+    | '/admin/knowledge'
+    | '/admin/training'
+    | '/admin'
   id:
     | '__root__'
     | '/'
     | '/admin'
     | '/admin/integration'
+    | '/admin/knowledge'
     | '/admin/training'
     | '/admin/'
   fileRoutesById: FileRoutesById
@@ -116,6 +132,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminTrainingRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/knowledge': {
+      id: '/admin/knowledge'
+      path: '/knowledge'
+      fullPath: '/admin/knowledge'
+      preLoaderRoute: typeof AdminKnowledgeRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/integration': {
       id: '/admin/integration'
       path: '/integration'
@@ -128,12 +151,14 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteChildren {
   AdminIntegrationRoute: typeof AdminIntegrationRoute
+  AdminKnowledgeRoute: typeof AdminKnowledgeRoute
   AdminTrainingRoute: typeof AdminTrainingRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminIntegrationRoute: AdminIntegrationRoute,
+  AdminKnowledgeRoute: AdminKnowledgeRoute,
   AdminTrainingRoute: AdminTrainingRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
@@ -147,3 +172,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
