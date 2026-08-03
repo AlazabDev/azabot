@@ -10,7 +10,7 @@ import {
   type SessionSnapshot,
 } from "@/lib/supabase/session";
 import type { AppRole } from "@/lib/auth/roles";
-import { isAppRole } from "@/lib/auth/roles";
+import { APP_ROLES, isAppRole } from "@/lib/auth/roles";
 
 interface AuthContextValue {
   session: Session | null;
@@ -31,7 +31,7 @@ async function resolveRole(user: User | null): Promise<AppRole | null> {
     return metadataRole;
   }
 
-  const roles: AppRole[] = ["super_admin", "admin", "manager", "support", "user"];
+  const roles: AppRole[] = [...APP_ROLES];
   for (const role of roles) {
     const { data, error } = await supabase.rpc("has_role", {
       _user_id: user.id,
