@@ -31,7 +31,7 @@ async function resolveRole(user: User | null): Promise<AppRole | null> {
     return metadataRole;
   }
 
-  const roles: AppRole[] = ["super_admin", "admin", "manager", "support", "user"];
+  const roles: AppRole[] = [...APP_ROLES];
   for (const role of roles) {
     const { data, error } = await supabase.rpc("has_role", {
       _user_id: user.id,
