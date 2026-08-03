@@ -119,7 +119,9 @@ export function ChatWindow({
     } finally {
       setIsThinking(false);
       setStatus("online");
+      setTimeout(() => inputRef.current?.focus(), 30);
     }
+
   };
 
   const handleToggleVoice = () => {

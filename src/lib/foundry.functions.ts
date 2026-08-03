@@ -1,11 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createHmac, timingSafeEqual } from "crypto";
 
-const API_VERSION = "2024-12-01-preview";
+/** Azure AI Foundry v1 (conversations + responses) surface. */
+const V1_PATH = "/openai/v1";
 const REALTIME_API_VERSION = "2025-04-01-preview";
 
 const GENERIC_CHAT_ERROR = "تعذر معالجة الطلب حالياً، يرجى المحاولة لاحقاً.";
 const GENERIC_REALTIME_ERROR = "تعذر بدء المكالمة الصوتية حالياً، يرجى المحاولة لاحقاً.";
+
 
 interface FoundryAttachment {
   url: string;
@@ -66,26 +68,49 @@ function verifyThreadToken(token: string): string | null {
   }
 }
 
-async function foundryFetch<T>(
-  path: string,
-  init: RequestInit = {},
-  version = API_VERSION,
-): Promise<T> {
-  const base = getBase();
-  const sep = path.includes("?") ? "&" : "?";
-  const url = `${base}${path}${sep}api-version=${version}`;
+async function foundryFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const url = `${getBase()}${V1_PATH}${path}`;
   const res = await fetch(url, {
     ...init,
     headers: { ...authHeaders(), ...(init.headers || {}) },
   });
   if (!res.ok) {
     const text = await res.text();
-    // Log server-side; do not leak to client.
+    // Log server-side; do not leak provider details to the client.
     console.error(`[Foundry] ${res.status} ${path}: ${text.slice(0, 1000)}`);
     throw new Error(GENERIC_CHAT_ERROR);
   }
   return (await res.json()) as T;
 }
+
+interface ResponsesResult {
+  output_text?: string;
+  output?: Array<{
+    type?: string;
+    phase?: string;
+    role?: string;
+    content?: Array<{ type?: string; text?: string | { value?: string } }>;
+  }>;
+}
+
+function extractText(res: ResponsesResult): string {
+  if (typeof res.output_text === "string" && res.output_text.trim()) {
+    return res.output_text.trim();
+  }
+  const items = (res.output ?? []).filter(
+    (i) => i.role === "assistant" || i.type === "message",
+  );
+  const finals = items.filter((i) => i.phase === "final_answer");
+  const parts: string[] = [];
+  for (const item of finals.length ? finals : items) {
+    for (const c of item.content ?? []) {
+      if (typeof c.text === "string") parts.push(c.text);
+      else if (c.text?.value) parts.push(c.text.value);
+    }
+  }
+  return parts.join("\n").trim();
+}
+
 
 export const foundryChat = createServerFn({ method: "POST" })
   .inputValidator((data: FoundryChatInput) => {
@@ -110,118 +135,71 @@ export const foundryChat = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     try {
-      const agentId = process.env.FOUNDRY_AGENT_ID;
-      if (!agentId) throw new Error("FOUNDRY_AGENT_ID is not configured");
+      const agentName = process.env.FOUNDRY_AGENT_ID;
+      if (!agentName) throw new Error("FOUNDRY_AGENT_ID is not configured");
+      const agentVersion = process.env.FOUNDRY_AGENT_VERSION || "1";
 
-      // 1) Ensure thread — verify the caller's token or mint a new one.
-      let threadId: string | null = null;
-      if (data.threadId) {
-        threadId = verifyThreadToken(data.threadId);
-        if (!threadId) {
-          // Unknown / forged / legacy token — start a fresh thread instead of trusting it.
-          threadId = null;
-        }
-      }
-      if (!threadId) {
-        const thread = await foundryFetch<{ id: string }>("/threads", {
-          method: "POST",
-          body: JSON.stringify({}),
-        });
-        threadId = thread.id;
-      }
-
-      // 2) Build message content
+      // 1) Build the user message content parts.
       const contentParts: Array<Record<string, unknown>> = [];
-      if (data.message) {
-        contentParts.push({ type: "text", text: data.message });
-      }
       const fileList: string[] = [];
       for (const att of data.attachments ?? []) {
         if (att.type.startsWith("image/")) {
-          contentParts.push({
-            type: "image_url",
-            image_url: { url: att.url, detail: "auto" },
-          });
+          contentParts.push({ type: "input_image", image_url: att.url });
         } else {
           fileList.push(`- ${att.name}: ${att.url}`);
         }
       }
-      if (fileList.length) {
-        contentParts.push({
-          type: "text",
-          text: `\n\nالمرفقات:\n${fileList.join("\n")}`,
+      const text =
+        (data.message || "") +
+        (fileList.length ? `\n\nالمرفقات:\n${fileList.join("\n")}` : "");
+      contentParts.unshift({ type: "input_text", text: text || "..." });
+
+      const userItem = {
+        type: "message",
+        role: "user",
+        content: contentParts,
+      };
+
+      // 2) Ensure a conversation — verify the caller's signed token or mint a new one.
+      let conversationId: string | null = data.threadId
+        ? verifyThreadToken(data.threadId)
+        : null;
+      let itemsSent = false;
+
+      if (!conversationId) {
+        const conv = await foundryFetch<{ id: string }>("/conversations", {
+          method: "POST",
+          body: JSON.stringify({ items: [userItem] }),
         });
-      }
-      if (contentParts.length === 0) {
-        contentParts.push({ type: "text", text: "" });
+        conversationId = conv.id;
+        itemsSent = true;
       }
 
-      await foundryFetch(`/threads/${threadId}/messages`, {
+      // 3) Generate the agent response for this conversation.
+      const body: Record<string, unknown> = {
+        conversation: conversationId,
+        agent_reference: {
+          type: "agent_reference",
+          name: agentName,
+          version: agentVersion,
+        },
+      };
+
+      if (!itemsSent) body.input = [userItem];
+
+      const result = await foundryFetch<ResponsesResult>("/responses", {
         method: "POST",
-        body: JSON.stringify({ role: "user", content: contentParts }),
+        body: JSON.stringify(body),
       });
 
-      // 3) Create run — instructions are always server-defined (never from the client).
-      const run = await foundryFetch<{ id: string; status: string }>(
-        `/threads/${threadId}/runs`,
-        { method: "POST", body: JSON.stringify({ assistant_id: agentId }) },
-      );
-
-      // 4) Poll run
-      const start = Date.now();
-      let status = run.status;
-      let runId = run.id;
-      while (
-        status !== "completed" &&
-        status !== "failed" &&
-        status !== "cancelled" &&
-        status !== "expired" &&
-        Date.now() - start < 90_000
-      ) {
-        await new Promise((r) => setTimeout(r, 900));
-        const s = await foundryFetch<{
-          status: string;
-          id: string;
-          last_error?: { message?: string };
-        }>(`/threads/${threadId}/runs/${runId}`);
-        status = s.status;
-        runId = s.id;
-        if (status === "failed") {
-          console.error(`[Foundry] run failed: ${s.last_error?.message ?? "unknown"}`);
-          throw new Error(GENERIC_CHAT_ERROR);
-        }
-      }
-
-      if (status !== "completed") {
-        console.error(`[Foundry] run status: ${status}`);
-        throw new Error(GENERIC_CHAT_ERROR);
-      }
-
-      // 5) Fetch latest assistant message
-      const list = await foundryFetch<{
-        data: Array<{
-          role: string;
-          content: Array<{ type: string; text?: { value: string } }>;
-        }>;
-      }>(`/threads/${threadId}/messages?limit=5&order=desc`);
-
-      const assistant = list.data.find((m) => m.role === "assistant");
-      let reply = "";
-      if (assistant) {
-        reply = assistant.content
-          .map((c) => (c.type === "text" ? c.text?.value ?? "" : ""))
-          .join("\n")
-          .trim();
-      }
-
-      return { threadId: signThreadId(threadId!), reply };
+      return { threadId: signThreadId(conversationId), reply: extractText(result) };
     } catch (err) {
-      // Any unexpected error path: log server-side, return generic error to client.
       if (err instanceof Error && err.message === GENERIC_CHAT_ERROR) throw err;
       console.error("[Foundry] chat error:", err);
       throw new Error(GENERIC_CHAT_ERROR);
     }
   });
+
 
 /**
  * Mint an ephemeral Realtime session for the browser WebRTC/WS client.
