@@ -1,11 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createHmac, timingSafeEqual } from "crypto";
 
-const API_VERSION = "2024-12-01-preview";
+/** Azure AI Foundry v1 (conversations + responses) surface. */
+const V1_PATH = "/openai/v1";
 const REALTIME_API_VERSION = "2025-04-01-preview";
 
 const GENERIC_CHAT_ERROR = "تعذر معالجة الطلب حالياً، يرجى المحاولة لاحقاً.";
 const GENERIC_REALTIME_ERROR = "تعذر بدء المكالمة الصوتية حالياً، يرجى المحاولة لاحقاً.";
+
 
 interface FoundryAttachment {
   url: string;
