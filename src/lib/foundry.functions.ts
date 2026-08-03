@@ -87,6 +87,8 @@ interface ResponsesResult {
   output_text?: string;
   output?: Array<{
     type?: string;
+    phase?: string;
+    role?: string;
     content?: Array<{ type?: string; text?: string | { value?: string } }>;
   }>;
 }
@@ -95,8 +97,12 @@ function extractText(res: ResponsesResult): string {
   if (typeof res.output_text === "string" && res.output_text.trim()) {
     return res.output_text.trim();
   }
+  const items = (res.output ?? []).filter(
+    (i) => i.role === "assistant" || i.type === "message",
+  );
+  const finals = items.filter((i) => i.phase === "final_answer");
   const parts: string[] = [];
-  for (const item of res.output ?? []) {
+  for (const item of finals.length ? finals : items) {
     for (const c of item.content ?? []) {
       if (typeof c.text === "string") parts.push(c.text);
       else if (c.text?.value) parts.push(c.text.value);
@@ -104,6 +110,7 @@ function extractText(res: ResponsesResult): string {
   }
   return parts.join("\n").trim();
 }
+
 
 export const foundryChat = createServerFn({ method: "POST" })
   .inputValidator((data: FoundryChatInput) => {
