@@ -178,8 +178,13 @@ export const foundryChat = createServerFn({ method: "POST" })
       // 3) Generate the agent response for this conversation.
       const body: Record<string, unknown> = {
         conversation: conversationId,
-        agent: { name: agentName, version: agentVersion, type: "agent_reference" },
+        agent_reference: {
+          type: "agent_reference",
+          name: agentName,
+          version: agentVersion,
+        },
       };
+
       if (!itemsSent) body.input = [userItem];
 
       const result = await foundryFetch<ResponsesResult>("/responses", {
