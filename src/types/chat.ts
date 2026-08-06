@@ -30,7 +30,10 @@ export interface ChatSettingsState {
   voiceReplies: boolean;
   exportFormat: ExportFormat;
   theme: ThemeMode;
+  /** Selected speech-synthesis voice (voiceURI); empty = default. */
+  voiceURI?: string;
 }
+
 
 export interface ChatApiRequestMeta {
   language: "ar" | "en";
