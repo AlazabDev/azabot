@@ -45,11 +45,11 @@ export function ChatButton({ isOpen, onClick }: ChatButtonProps) {
   }, [isOpen]);
 
   return (
-    <div className="fixed bottom-5 right-5 z-[9999] flex flex-col items-end gap-2 sm:bottom-6 sm:right-6">
+    <div className="fixed bottom-5 right-5 z-[9999] flex flex-col items-end sm:bottom-6 sm:right-6">
       {showBubble && !isOpen && (
         <div
           dir="rtl"
-          className="azab-pop-in relative max-w-[240px] rounded-2xl bg-white px-3.5 py-2 text-[13px] font-medium text-[#030957] shadow-lg ring-1 ring-black/5"
+          className="azab-pop-in absolute bottom-full right-0 mb-2 w-[240px] rounded-2xl bg-white px-3.5 py-2 text-[13px] font-medium text-[#030957] shadow-lg ring-1 ring-black/5"
           style={{ minHeight: 36 }}
         >
           <span className="whitespace-pre-wrap leading-relaxed">
@@ -69,11 +69,12 @@ export function ChatButton({ isOpen, onClick }: ChatButtonProps) {
         aria-label={isOpen ? "إغلاق المساعد" : "فتح المساعد"}
         aria-expanded={isOpen}
         className={cn(
-          "relative flex items-center justify-center overflow-hidden rounded-full bg-white shadow-xl ring-2 ring-[#ffb900]/70 transition-all duration-300 hover:scale-110 active:scale-95 focus:outline-none focus:ring-4 focus:ring-[#ffb900]/50",
+          "relative flex items-center justify-center focus:outline-none",
           // Closed: keep the astro-bot image at its original size.
           // Open: 30% smaller so the close control stays discreet.
-          isOpen ? "h-11 w-11" : "h-16 w-16",
-          !isOpen && "azab-float-pulse",
+          isOpen
+            ? "h-11 w-11 overflow-hidden rounded-full shadow-xl ring-2 ring-[#ffb900]/70 transition active:scale-95 focus:ring-4 focus:ring-[#ffb900]/50"
+            : "h-16 w-16",
         )}
       >
         {isOpen ? (
