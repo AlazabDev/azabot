@@ -21,7 +21,15 @@ export function ChatSettings({
   onClear,
   onClose,
 }: ChatSettingsProps) {
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+  useEffect(() => {
+    setVoices(listVoices());
+    return onVoicesChanged(() => setVoices(listVoices()));
+  }, []);
+
   return (
+
     <div
       className="azab-pop-in absolute inset-x-0 top-0 z-10 m-2 rounded-xl border border-black/5 bg-white p-4 text-sm shadow-xl"
       role="dialog"
