@@ -106,7 +106,12 @@ export function ChatWindow({
       setMessages((prev) => [...prev, assistantMsg]);
       if (settings.voiceReplies) {
         setSpeakingId(assistantMsg.id);
-        speak(assistantMsg.content, detectLanguage(assistantMsg.content));
+        speak(
+          assistantMsg.content,
+          detectLanguage(assistantMsg.content),
+          settings.voiceURI,
+        );
+
       }
     } catch (err) {
       const errorMsg: ChatMessage = {
@@ -197,7 +202,7 @@ export function ChatWindow({
       return;
     }
     setSpeakingId(msg.id);
-    speak(msg.content, detectLanguage(msg.content));
+    speak(msg.content, detectLanguage(msg.content), settings.voiceURI);
   };
 
   if (!open) return null;
