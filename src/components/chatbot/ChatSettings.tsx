@@ -1,9 +1,12 @@
-import { Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Trash2, Volume2 } from "lucide-react";
 import type {
   ChatSettingsState,
   ExportFormat,
   ThemeMode,
 } from "@/types/chat";
+import { listVoices, onVoicesChanged, speak } from "@/lib/voice";
+
 
 interface ChatSettingsProps {
   settings: ChatSettingsState;
