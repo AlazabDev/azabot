@@ -57,6 +57,8 @@ export function ChatbotWidget() {
     if (!hydrated) return;
     if (conversationId) {
       window.localStorage.setItem(LS_CONV_ID, conversationId);
+    } else {
+      window.localStorage.removeItem(LS_CONV_ID);
     }
   }, [conversationId, hydrated]);
 
