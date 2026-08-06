@@ -135,9 +135,13 @@ export const foundryChat = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     try {
-      const agentName = process.env.FOUNDRY_AGENT_ID;
-      if (!agentName) throw new Error("FOUNDRY_AGENT_ID is not configured");
-      const agentVersion = process.env.FOUNDRY_AGENT_VERSION || "1";
+      const agentName =
+        process.env.FOUNDRY_AGENT_NAME || process.env.FOUNDRY_AGENT_ID;
+      if (!agentName) throw new Error("FOUNDRY_AGENT_NAME is not configured");
+      const agentVersion =
+        process.env.FOUNDRY_AGENT_VER ||
+        process.env.FOUNDRY_AGENT_VERSION ||
+        "1";
 
       // 1) Build the user message content parts.
       const contentParts: Array<Record<string, unknown>> = [];
