@@ -199,7 +199,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                 color: "#030957",
               }}
             >
-              <Send className="h-4 w-4 rtl:rotate-180" />
+              <Send className="h-4 w-4 rtl:-scale-x-100" />
             </button>
           </div>
 

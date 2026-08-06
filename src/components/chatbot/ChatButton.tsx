@@ -69,7 +69,10 @@ export function ChatButton({ isOpen, onClick }: ChatButtonProps) {
         aria-label={isOpen ? "إغلاق المساعد" : "فتح المساعد"}
         aria-expanded={isOpen}
         className={cn(
-          "relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-white shadow-xl ring-2 ring-[#ffb900]/70 transition-all duration-300 hover:scale-110 active:scale-95 focus:outline-none focus:ring-4 focus:ring-[#ffb900]/50",
+          "relative flex items-center justify-center overflow-hidden rounded-full bg-white shadow-xl ring-2 ring-[#ffb900]/70 transition-all duration-300 hover:scale-110 active:scale-95 focus:outline-none focus:ring-4 focus:ring-[#ffb900]/50",
+          // Closed: keep the astro-bot image at its original size.
+          // Open: 30% smaller so the close control stays discreet.
+          isOpen ? "h-11 w-11" : "h-16 w-16",
           !isOpen && "azab-float-pulse",
         )}
       >
@@ -81,7 +84,7 @@ export function ChatButton({ isOpen, onClick }: ChatButtonProps) {
               color: "#fff",
             }}
           >
-            <X className="h-6 w-6" strokeWidth={2.5} />
+            <X className="h-5 w-5" strokeWidth={2.5} />
           </span>
         ) : (
           <img

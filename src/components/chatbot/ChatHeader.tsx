@@ -1,4 +1,4 @@
-import { Download, Phone, Settings as SettingsIcon, Sparkles, X } from "lucide-react";
+import { Download, MessageSquarePlus, Phone, Settings as SettingsIcon, Sparkles, X } from "lucide-react";
 import { useState } from "react";
 import type { ChatStatus, ExportFormat } from "@/types/chat";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,7 @@ interface ChatHeaderProps {
   onDownload: (format: ExportFormat) => void;
   onToggleSettings: () => void;
   onStartCall: () => void;
+  onNewChat: () => void;
   defaultExportFormat: ExportFormat;
 }
 
@@ -30,6 +31,7 @@ export function ChatHeader({
   onDownload,
   onToggleSettings,
   onStartCall,
+  onNewChat,
   defaultExportFormat,
 }: ChatHeaderProps) {
   const [downloadOpen, setDownloadOpen] = useState(false);
@@ -41,15 +43,15 @@ export function ChatHeader({
 
   return (
     <header
-      className="relative flex items-center justify-between gap-3 px-4 py-3 text-white"
+      className="relative flex items-center justify-between gap-2 px-3 py-3 text-white"
       style={{
         background:
           "linear-gradient(135deg, #030957 0%, #0a1170 60%, #1a2280 100%)",
       }}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 items-center gap-2.5">
         <div
-          className="relative flex h-10 w-10 items-center justify-center rounded-full shadow-md"
+          className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full shadow-md"
           style={{
             background: "linear-gradient(135deg, #ffb900 0%, #ffd166 100%)",
             color: "#030957",
@@ -63,8 +65,8 @@ export function ChatHeader({
           />
         </div>
 
-        <div className="leading-tight">
-          <div className="font-semibold">Azab Assistant</div>
+        <div className="min-w-0 leading-tight">
+          <div className="truncate whitespace-nowrap font-semibold">Azab Assistant</div>
           <div className="flex items-center gap-1.5 text-xs opacity-90">
             <span
               className={cn(
@@ -78,12 +80,21 @@ export function ChatHeader({
         </div>
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex shrink-0 items-center gap-0.5">
+        <button
+          type="button"
+          onClick={onNewChat}
+          aria-label="بدء دردشة جديدة"
+          title="دردشة جديدة"
+          className="rounded-md p-1.5 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#ffb900]"
+        >
+          <MessageSquarePlus className="h-4 w-4" />
+        </button>
         <button
           type="button"
           onClick={onStartCall}
           aria-label="بدء مكالمة صوتية"
-          className="rounded-md p-2 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#ffb900]"
+          className="rounded-md p-1.5 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#ffb900]"
         >
           <Phone className="h-4 w-4" />
         </button>
@@ -94,7 +105,7 @@ export function ChatHeader({
             aria-label="تحميل المحادثة"
             aria-haspopup="menu"
             aria-expanded={downloadOpen}
-            className="rounded-md p-2 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#ffb900]"
+            className="rounded-md p-1.5 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#ffb900]"
           >
             <Download className="h-4 w-4" />
           </button>
@@ -129,7 +140,7 @@ export function ChatHeader({
           type="button"
           onClick={onToggleSettings}
           aria-label="الإعدادات"
-          className="rounded-md p-2 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#ffb900]"
+          className="rounded-md p-1.5 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#ffb900]"
         >
           <SettingsIcon className="h-4 w-4" />
         </button>
@@ -137,7 +148,7 @@ export function ChatHeader({
           type="button"
           onClick={onClose}
           aria-label="إغلاق"
-          className="rounded-md p-2 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#ffb900]"
+          className="rounded-md p-1.5 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#ffb900]"
         >
           <X className="h-4 w-4" />
         </button>
