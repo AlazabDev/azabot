@@ -91,17 +91,11 @@ export function ChatButton({ isOpen, onClick }: ChatButtonProps) {
           <img
             src="/astro-bot.gif"
             alt="عزبوت"
-            className="h-full w-full object-cover"
+            className="h-full w-full object-contain"
             draggable={false}
           />
         )}
-        {!isOpen && (
-          <span
-            className="absolute bottom-1 right-1 h-3 w-3 rounded-full border-2 border-white"
-            style={{ backgroundColor: "#22c55e" }}
-            aria-hidden
-          />
-        )}
+
       </button>
     </div>
   );
