@@ -177,6 +177,19 @@ export function ChatWindow({
     setSpeakingId(null);
   };
 
+  const handleNewChat = () => {
+    if (messages.length > 0 && !confirm("بدء دردشة جديدة؟ سيتم مسح المحادثة الحالية.")) {
+      return;
+    }
+    stopSpeaking();
+    setSpeakingId(null);
+    setMessages([]);
+    setConversationId("");
+    setSettingsOpen(false);
+    setCallOpen(false);
+    setTimeout(() => inputRef.current?.focus(), 30);
+  };
+
   const handleToggleSpeak = (msg: ChatMessage) => {
     if (speakingId === msg.id) {
       stopSpeaking();
@@ -203,6 +216,7 @@ export function ChatWindow({
         onDownload={handleDownload}
         onToggleSettings={() => setSettingsOpen((v) => !v)}
         onStartCall={() => setCallOpen(true)}
+        onNewChat={handleNewChat}
         defaultExportFormat={settings.exportFormat}
       />
 

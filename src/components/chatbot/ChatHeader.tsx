@@ -1,4 +1,4 @@
-import { Download, Phone, Settings as SettingsIcon, Sparkles, X } from "lucide-react";
+import { Download, MessageSquarePlus, Phone, Settings as SettingsIcon, Sparkles, X } from "lucide-react";
 import { useState } from "react";
 import type { ChatStatus, ExportFormat } from "@/types/chat";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,7 @@ interface ChatHeaderProps {
   onDownload: (format: ExportFormat) => void;
   onToggleSettings: () => void;
   onStartCall: () => void;
+  onNewChat: () => void;
   defaultExportFormat: ExportFormat;
 }
 
@@ -30,6 +31,7 @@ export function ChatHeader({
   onDownload,
   onToggleSettings,
   onStartCall,
+  onNewChat,
   defaultExportFormat,
 }: ChatHeaderProps) {
   const [downloadOpen, setDownloadOpen] = useState(false);
@@ -79,6 +81,15 @@ export function ChatHeader({
       </div>
 
       <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={onNewChat}
+          aria-label="بدء دردشة جديدة"
+          title="دردشة جديدة"
+          className="rounded-md p-2 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#ffb900]"
+        >
+          <MessageSquarePlus className="h-4 w-4" />
+        </button>
         <button
           type="button"
           onClick={onStartCall}
