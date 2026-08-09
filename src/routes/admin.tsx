@@ -7,14 +7,14 @@ export const Route = createFileRoute("/admin")({
   beforeLoad: async () => {
     const { data: userData, error: userErr } = await supabase.auth.getUser();
     if (userErr || !userData.user) {
-      throw redirect({ to: "/" });
+      throw redirect({ to: "/auth" });
     }
     const { data: isAdmin, error: roleErr } = await supabase.rpc("has_role", {
       _user_id: userData.user.id,
       _role: "admin",
     });
     if (roleErr || !isAdmin) {
-      throw redirect({ to: "/" });
+      throw redirect({ to: "/auth" });
     }
   },
   component: AdminLayout,
