@@ -10,7 +10,7 @@ import {
   type SessionSnapshot,
 } from "@/lib/supabase/session";
 import type { AppRole } from "@/lib/auth/roles";
-import { APP_ROLES, isAppRole } from "@/lib/auth/roles";
+import { APP_ROLES } from "@/lib/auth/roles";
 
 interface AuthContextValue {
   session: Session | null;
@@ -26,11 +26,9 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 async function resolveRole(user: User | null): Promise<AppRole | null> {
   if (!user) return null;
 
-  const metadataRole = user.user_metadata?.role;
-  if (isAppRole(metadataRole)) {
-    return metadataRole;
-  }
-
+  // SECURITY: never trust user_metadata.role — users can edit their own
+  // metadata via auth.updateUser(). Always resolve via the server-side
+  // has_role() check against public.user_roles.
   const roles: AppRole[] = [...APP_ROLES];
   for (const role of roles) {
     const { data, error } = await supabase.rpc("has_role", {
@@ -45,6 +43,7 @@ async function resolveRole(user: User | null): Promise<AppRole | null> {
 
   return null;
 }
+
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [snapshot, setSnapshot] = useState<SessionSnapshot>(
