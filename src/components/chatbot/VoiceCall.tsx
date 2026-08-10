@@ -243,6 +243,11 @@ export function VoiceCall({
   const toggleMute = () => {
     const next = !muted;
     setMuted(next);
+    if (liveRef.current) {
+      liveRef.current.setMuted(next);
+      setState(next ? "idle" : "listening");
+      return;
+    }
     if (next) {
       try {
         recRef.current?.stop();
