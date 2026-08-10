@@ -1,5 +1,14 @@
-import { useEffect, useRef } from "react";
-import { Bot, FileText, Pause, Sparkles, User, Volume2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  ArrowDown,
+  Bot,
+  FileText,
+  Pause,
+  RotateCcw,
+  Sparkles,
+  User,
+  Volume2,
+} from "lucide-react";
 import type { ChatMessage } from "@/types/chat";
 import { cn } from "@/lib/utils";
 
@@ -9,6 +18,7 @@ interface ChatMessagesProps {
   voiceRepliesEnabled: boolean;
   speakingMessageId: string | null;
   onToggleSpeak: (msg: ChatMessage) => void;
+  onRetry?: (msg: ChatMessage) => void;
   onSuggestion?: (text: string) => void;
 }
 
