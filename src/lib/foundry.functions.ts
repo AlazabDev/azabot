@@ -199,7 +199,12 @@ export const foundryChat = createServerFn({ method: "POST" })
 
       return { threadId: signThreadId(conversationId), reply: extractText(result) };
     } catch (err) {
-      if (err instanceof Error && err.message === GENERIC_CHAT_ERROR) throw err;
+      if (
+        err instanceof Error &&
+        (err.message === GENERIC_CHAT_ERROR || err.message === "E_RATE_LIMIT")
+      ) {
+        throw err;
+      }
       console.error("[Foundry] chat error:", err);
       throw new Error(GENERIC_CHAT_ERROR);
     }
