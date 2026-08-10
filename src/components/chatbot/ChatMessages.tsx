@@ -206,10 +206,12 @@ export function ChatMessages({
                 dir={dir}
                 className="whitespace-pre-wrap break-words rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm"
                 style={{
-                  background: isUser
-                    ? "linear-gradient(135deg, #030957 0%, #1a2280 100%)"
-                    : "var(--azab-assistant-bubble)",
-                  color: isUser ? "#ffffff" : "#030957",
+                  background: m.failed
+                    ? "#fef2f2"
+                    : isUser
+                      ? "linear-gradient(135deg, #030957 0%, #1a2280 100%)"
+                      : "var(--azab-assistant-bubble)",
+                  color: m.failed ? "#b91c1c" : isUser ? "#ffffff" : "#030957",
                   borderBottomRightRadius: isUser ? 6 : undefined,
                   borderBottomLeftRadius: !isUser ? 6 : undefined,
                 }}
@@ -245,6 +247,17 @@ export function ChatMessages({
                 )}
               </div>
 
+              {m.failed && onRetry && (
+                <button
+                  type="button"
+                  onClick={() => onRetry(m)}
+                  className="flex min-h-[36px] items-center gap-1.5 rounded-full border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-600 shadow-sm transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-[#ffb900]"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  إعادة المحاولة
+                </button>
+              )}
+
               <div
                 className={cn(
                   "flex items-center gap-2 px-1 text-[10px] text-muted-foreground",
@@ -252,7 +265,7 @@ export function ChatMessages({
                 )}
               >
                 <span>{formatTime(m.timestamp)}</span>
-                {!isUser && voiceRepliesEnabled && (
+                {!isUser && !m.failed && voiceRepliesEnabled && (
                   <button
                     type="button"
                     onClick={() => onToggleSpeak(m)}
@@ -272,8 +285,10 @@ export function ChatMessages({
         );
       })}
 
-      {isThinking && <TypingIndicator />}
-      <div ref={bottomRef} />
+        {isThinking && <TypingIndicator />}
+        <div ref={bottomRef} />
+      </div>
     </div>
   );
+
 }
