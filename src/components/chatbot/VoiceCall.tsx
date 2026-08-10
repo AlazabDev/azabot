@@ -221,7 +221,8 @@ export function VoiceCall({
         if (activeRef.current && !mutedRef.current) startListening();
       });
     } catch (err) {
-      setError((err as Error).message);
+      logChatError("voice-call", err);
+      setError(toUserErrorMessage(err));
       setState("idle");
     }
   };
