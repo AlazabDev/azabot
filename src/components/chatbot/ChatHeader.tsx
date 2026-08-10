@@ -14,16 +14,27 @@ interface ChatHeaderProps {
 }
 
 const STATUS_LABEL: Record<ChatStatus, string> = {
-  online: "متصل الآن",
-  thinking: "يفكر...",
+  idle: "متصل الآن",
+  completed: "متصل الآن",
+  connecting: "يتصل...",
+  streaming: "يفكر...",
   listening: "يستمع...",
+  error: "تعذر الاتصال",
+  offline: "لا يوجد اتصال",
 };
 
 const STATUS_DOT: Record<ChatStatus, string> = {
-  online: "#22c55e",
-  thinking: "#ffb900",
+  idle: "#22c55e",
+  completed: "#22c55e",
+  connecting: "#ffb900",
+  streaming: "#ffb900",
   listening: "#ef4444",
+  error: "#ef4444",
+  offline: "#9ca3af",
 };
+
+const PULSING: ChatStatus[] = ["connecting", "streaming"];
+
 
 export function ChatHeader({
   status,
