@@ -78,6 +78,7 @@ async function foundryFetch<T>(path: string, init: RequestInit = {}): Promise<T>
     const text = await res.text();
     // Log server-side; do not leak provider details to the client.
     console.error(`[Foundry] ${res.status} ${path}: ${text.slice(0, 1000)}`);
+    if (res.status === 429) throw new Error("E_RATE_LIMIT");
     throw new Error(GENERIC_CHAT_ERROR);
   }
   return (await res.json()) as T;
