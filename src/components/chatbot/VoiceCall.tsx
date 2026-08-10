@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { PhoneOff, Mic, MicOff, Loader2 } from "lucide-react";
 import { sendChatMessage } from "@/lib/chatApi";
+import { startLiveCall, type LiveCallHandle } from "@/lib/liveCall";
+import { logChatError, toUserErrorMessage } from "@/lib/chatErrors";
 import {
   detectLanguage,
   getSpeechRecognition,
@@ -11,7 +13,7 @@ import {
 } from "@/lib/voice";
 import type { ChatMessage } from "@/types/chat";
 
-type CallState = "idle" | "listening" | "thinking" | "speaking";
+type CallState = "idle" | "connecting" | "listening" | "thinking" | "speaking";
 
 interface VoiceCallProps {
   open: boolean;
@@ -33,8 +35,10 @@ export function VoiceCall({
   const [muted, setMuted] = useState(false);
   const [caption, setCaption] = useState("");
   const [duration, setDuration] = useState(0);
+  const [live, setLive] = useState(false);
 
   const recRef = useRef<ReturnType<typeof getSpeechRecognition>>(null);
+  const liveRef = useRef<LiveCallHandle | null>(null);
   const stateRef = useRef<CallState>("idle");
   const mutedRef = useRef(false);
   const convRef = useRef(conversationId);
@@ -52,29 +56,86 @@ export function VoiceCall({
 
   useEffect(() => {
     if (!open) return;
-    if (!isSpeechRecognitionSupported() || !isSpeechSynthesisSupported()) {
-      setError("المتصفح لا يدعم الاتصال الصوتي المباشر. جرّب Chrome على سطح المكتب أو Android.");
-      return;
-    }
     activeRef.current = true;
+    setError(null);
+    setState("connecting");
     const startedAt = Date.now();
-    const timer = setInterval(() => setDuration(Math.floor((Date.now() - startedAt) / 1000)), 1000);
+    const timer = setInterval(
+      () => setDuration(Math.floor((Date.now() - startedAt) / 1000)),
+      1000,
+    );
 
-    startListening();
+    // Prefer a true live (full-duplex) realtime call; fall back to the
+    // speech-recognition turn loop when realtime isn't available.
+    (async () => {
+      try {
+        const handle = await startLiveCall({
+          onConnected: () => {
+            if (!activeRef.current) return;
+            setLive(true);
+            setState("listening");
+          },
+          onSpeakingChange: (speaking) => {
+            if (!activeRef.current) return;
+            setState(speaking ? "speaking" : "listening");
+          },
+          onCaption: (t) => setCaption(t),
+          onUserText: (t) =>
+            onTranscript({
+              id: crypto.randomUUID(),
+              role: "user",
+              content: t,
+              timestamp: Date.now(),
+            }),
+          onAssistantText: (t) =>
+            onTranscript({
+              id: crypto.randomUUID(),
+              role: "assistant",
+              content: t,
+              timestamp: Date.now(),
+            }),
+          onClosed: () => {
+            if (activeRef.current) setError("انتهت المكالمة المباشرة.");
+          },
+        });
+        if (!activeRef.current) {
+          handle.stop();
+          return;
+        }
+        liveRef.current = handle;
+      } catch (err) {
+        logChatError("live-call", err);
+        if (!activeRef.current) return;
+        if (!isSpeechRecognitionSupported() || !isSpeechSynthesisSupported()) {
+          setError(
+            "المتصفح لا يدعم الاتصال الصوتي المباشر. جرّب Chrome على سطح المكتب أو Android.",
+          );
+          setState("idle");
+          return;
+        }
+        setLive(false);
+        startListening();
+      }
+    })();
 
     return () => {
       activeRef.current = false;
       clearInterval(timer);
       stopSpeaking();
+      liveRef.current?.stop();
+      liveRef.current = null;
       try {
         recRef.current?.stop();
       } catch {
         /* noop */
       }
       recRef.current = null;
+      setLive(false);
+      setState("idle");
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
 
   const startListening = () => {
     if (!activeRef.current || mutedRef.current) return;
