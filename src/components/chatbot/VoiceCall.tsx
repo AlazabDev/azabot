@@ -263,6 +263,8 @@ export function VoiceCall({
 
   const handleHangup = () => {
     activeRef.current = false;
+    liveRef.current?.stop();
+    liveRef.current = null;
     try {
       recRef.current?.stop();
     } catch {
@@ -282,18 +284,22 @@ export function VoiceCall({
       dir="rtl"
       role="dialog"
       aria-label="مكالمة صوتية مع Azab Assistant"
-      className="absolute inset-0 z-20 flex flex-col items-center justify-between p-6 text-white"
+      className="absolute inset-0 z-20 flex flex-col items-center justify-between overflow-x-hidden p-6 text-white"
       style={{
         background:
           "linear-gradient(160deg, #030957 0%, #0a1170 55%, #1a2280 100%)",
+        paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
       }}
     >
       <div className="w-full text-center">
-        <div className="text-xs opacity-70">مكالمة صوتية مباشرة</div>
+        <div className="text-xs opacity-70">
+          {live ? "مكالمة صوتية مباشرة (Live)" : "مكالمة صوتية"}
+        </div>
         <div className="mt-1 font-mono text-lg tabular-nums">
           {mm}:{ss}
         </div>
       </div>
+
 
       <div className="flex flex-col items-center gap-6">
         <div className="relative flex h-32 w-32 items-center justify-center rounded-full bg-white/10 backdrop-blur">
