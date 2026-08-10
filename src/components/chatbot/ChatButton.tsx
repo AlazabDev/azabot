@@ -45,7 +45,14 @@ export function ChatButton({ isOpen, onClick }: ChatButtonProps) {
   }, [isOpen]);
 
   return (
-    <div className="fixed bottom-5 right-5 z-[9999] flex flex-col items-end sm:bottom-6 sm:right-6">
+    <div
+      className={cn(
+        "fixed bottom-5 right-5 z-[9999] flex flex-col items-end sm:bottom-6 sm:right-6",
+        // On mobile the window is full-screen, so the launcher would overlap it.
+        isOpen && "hidden sm:flex",
+      )}
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
       {showBubble && !isOpen && (
         <div
           dir="rtl"

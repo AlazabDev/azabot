@@ -78,6 +78,7 @@ async function foundryFetch<T>(path: string, init: RequestInit = {}): Promise<T>
     const text = await res.text();
     // Log server-side; do not leak provider details to the client.
     console.error(`[Foundry] ${res.status} ${path}: ${text.slice(0, 1000)}`);
+    if (res.status === 429) throw new Error("E_RATE_LIMIT");
     throw new Error(GENERIC_CHAT_ERROR);
   }
   return (await res.json()) as T;
@@ -198,7 +199,12 @@ export const foundryChat = createServerFn({ method: "POST" })
 
       return { threadId: signThreadId(conversationId), reply: extractText(result) };
     } catch (err) {
-      if (err instanceof Error && err.message === GENERIC_CHAT_ERROR) throw err;
+      if (
+        err instanceof Error &&
+        (err.message === GENERIC_CHAT_ERROR || err.message === "E_RATE_LIMIT")
+      ) {
+        throw err;
+      }
       console.error("[Foundry] chat error:", err);
       throw new Error(GENERIC_CHAT_ERROR);
     }
@@ -224,9 +230,13 @@ export const foundryRealtimeSession = createServerFn({ method: "POST" })
         body: JSON.stringify({
           model: deployment,
           voice: "alloy",
+          modalities: ["audio", "text"],
+          input_audio_transcription: { model: "whisper-1" },
+          turn_detection: { type: "server_vad" },
           instructions:
             "You are Azab Assistant. Respond concisely in the user's language (Arabic or English).",
         }),
+
       });
       if (!res.ok) {
         console.error(

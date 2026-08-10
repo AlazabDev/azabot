@@ -148,7 +148,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               type="button"
               onClick={() => inputRef.current?.click()}
               aria-label="إرفاق ملفات"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#030957]/70 transition hover:bg-[#030957]/5 hover:text-[#030957] focus:outline-none focus:ring-2 focus:ring-[#ffb900]"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#030957]/70 transition hover:bg-[#030957]/5 hover:text-[#030957] focus:outline-none focus:ring-2 focus:ring-[#ffb900] sm:h-8 sm:w-8"
             >
               <Paperclip className="h-4 w-4" />
             </button>
@@ -156,7 +156,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               type="button"
               onClick={() => cameraRef.current?.click()}
               aria-label="التقاط صورة بالكاميرا"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#030957]/70 transition hover:bg-[#030957]/5 hover:text-[#030957] focus:outline-none focus:ring-2 focus:ring-[#ffb900]"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#030957]/70 transition hover:bg-[#030957]/5 hover:text-[#030957] focus:outline-none focus:ring-2 focus:ring-[#ffb900] sm:h-8 sm:w-8"
             >
               <Camera className="h-4 w-4" />
             </button>
@@ -180,7 +180,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               }}
               placeholder={isListening ? "جاري الاستماع..." : "اكتب رسالتك..."}
               aria-label="نص الرسالة"
-              className="max-h-[140px] min-h-[36px] flex-1 resize-none bg-transparent px-1 py-1.5 text-sm leading-relaxed text-[#030957] placeholder:text-muted-foreground focus:outline-none"
+              className="max-h-[140px] min-h-[40px] w-0 flex-1 resize-none bg-transparent px-1 py-2 text-base leading-relaxed text-[#030957] placeholder:text-muted-foreground focus:outline-none sm:min-h-[36px] sm:py-1.5 sm:text-sm"
             />
 
             <button
@@ -189,7 +189,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               disabled={!canSend}
               aria-label="إرسال"
               className={cn(
-                "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition focus:outline-none focus:ring-2 focus:ring-[#ffb900] disabled:cursor-not-allowed disabled:opacity-40",
+                "flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition focus:outline-none focus:ring-2 focus:ring-[#ffb900] disabled:cursor-not-allowed disabled:opacity-40 sm:h-8 sm:w-8",
                 canSend && "hover:scale-105 active:scale-95",
               )}
               style={{
@@ -203,10 +203,11 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             </button>
           </div>
 
-          <div className="mt-1.5 px-1 text-center text-[10px] text-muted-foreground">
+          <div className="mt-1.5 hidden px-1 text-center text-[10px] text-muted-foreground sm:block">
             اضغط <kbd className="rounded border border-black/10 bg-white px-1 py-0.5 text-[9px] font-medium text-[#030957]">Enter</kbd> للإرسال •{" "}
             <kbd className="rounded border border-black/10 bg-white px-1 py-0.5 text-[9px] font-medium text-[#030957]">Shift + Enter</kbd> لسطر جديد
           </div>
+
         </div>
       </div>
     );

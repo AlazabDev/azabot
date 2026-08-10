@@ -1,6 +1,16 @@
 export type Role = "user" | "assistant";
 
-export type ChatStatus = "online" | "thinking" | "listening";
+/** Single source of truth for the widget lifecycle. No competing booleans. */
+export type ChatPhase =
+  | "idle"
+  | "connecting"
+  | "streaming"
+  | "completed"
+  | "error"
+  | "offline"
+  | "listening";
+
+export type ChatStatus = ChatPhase;
 
 export interface ChatFile {
   id: string;
@@ -21,6 +31,10 @@ export interface ChatMessage {
   content: string;
   files?: ChatFile[];
   timestamp: number;
+  /** True when this bubble represents a failed reply (shows retry). */
+  failed?: boolean;
+  /** The user message id this failed reply belongs to. */
+  retryOf?: string;
 }
 
 export type ExportFormat = "txt" | "json" | "md";

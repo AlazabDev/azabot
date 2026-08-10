@@ -1,5 +1,14 @@
-import { useEffect, useRef } from "react";
-import { Bot, FileText, Pause, Sparkles, User, Volume2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  ArrowDown,
+  Bot,
+  FileText,
+  Pause,
+  RotateCcw,
+  Sparkles,
+  User,
+  Volume2,
+} from "lucide-react";
 import type { ChatMessage } from "@/types/chat";
 import { cn } from "@/lib/utils";
 
@@ -9,6 +18,7 @@ interface ChatMessagesProps {
   voiceRepliesEnabled: boolean;
   speakingMessageId: string | null;
   onToggleSpeak: (msg: ChatMessage) => void;
+  onRetry?: (msg: ChatMessage) => void;
   onSuggestion?: (text: string) => void;
 }
 
@@ -112,12 +122,29 @@ export function ChatMessages({
   voiceRepliesEnabled,
   speakingMessageId,
   onToggleSpeak,
+  onRetry,
   onSuggestion,
 }: ChatMessagesProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [pinned, setPinned] = useState(true);
+
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    bottomRef.current?.scrollIntoView({ behavior, block: "end" });
+    setPinned(true);
+  }, []);
+
+  // Track whether the user is reading history; never yank them back down.
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setPinned(distance < 80);
+  }, []);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    if (pinned) scrollToBottom();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, isThinking]);
 
   if (messages.length === 0 && !isThinking) {
@@ -129,7 +156,23 @@ export function ChatMessages({
   }
 
   return (
-    <div className="azab-scroll flex-1 space-y-4 overflow-y-auto px-4 py-4">
+    <div className="relative flex flex-1 overflow-hidden">
+      {!pinned && (
+        <button
+          type="button"
+          onClick={() => scrollToBottom()}
+          className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-[#030957] px-3 py-2 text-xs font-medium text-white shadow-lg transition hover:bg-[#0a1170] focus:outline-none focus:ring-2 focus:ring-[#ffb900]"
+        >
+          <ArrowDown className="h-3.5 w-3.5" />
+          العودة لآخر رسالة
+        </button>
+      )}
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="azab-scroll flex-1 space-y-4 overflow-y-auto overflow-x-hidden px-4 py-4 overscroll-contain"
+      >
+
       {messages.map((m) => {
         const isUser = m.role === "user";
         const isSpeaking = speakingMessageId === m.id;
@@ -163,10 +206,12 @@ export function ChatMessages({
                 dir={dir}
                 className="whitespace-pre-wrap break-words rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm"
                 style={{
-                  background: isUser
-                    ? "linear-gradient(135deg, #030957 0%, #1a2280 100%)"
-                    : "var(--azab-assistant-bubble)",
-                  color: isUser ? "#ffffff" : "#030957",
+                  background: m.failed
+                    ? "#fef2f2"
+                    : isUser
+                      ? "linear-gradient(135deg, #030957 0%, #1a2280 100%)"
+                      : "var(--azab-assistant-bubble)",
+                  color: m.failed ? "#b91c1c" : isUser ? "#ffffff" : "#030957",
                   borderBottomRightRadius: isUser ? 6 : undefined,
                   borderBottomLeftRadius: !isUser ? 6 : undefined,
                 }}
@@ -202,6 +247,17 @@ export function ChatMessages({
                 )}
               </div>
 
+              {m.failed && onRetry && (
+                <button
+                  type="button"
+                  onClick={() => onRetry(m)}
+                  className="flex min-h-[36px] items-center gap-1.5 rounded-full border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-600 shadow-sm transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-[#ffb900]"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  إعادة المحاولة
+                </button>
+              )}
+
               <div
                 className={cn(
                   "flex items-center gap-2 px-1 text-[10px] text-muted-foreground",
@@ -209,7 +265,7 @@ export function ChatMessages({
                 )}
               >
                 <span>{formatTime(m.timestamp)}</span>
-                {!isUser && voiceRepliesEnabled && (
+                {!isUser && !m.failed && voiceRepliesEnabled && (
                   <button
                     type="button"
                     onClick={() => onToggleSpeak(m)}
@@ -229,8 +285,10 @@ export function ChatMessages({
         );
       })}
 
-      {isThinking && <TypingIndicator />}
-      <div ref={bottomRef} />
+        {isThinking && <TypingIndicator />}
+        <div ref={bottomRef} />
+      </div>
     </div>
   );
+
 }
