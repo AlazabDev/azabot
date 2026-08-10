@@ -316,13 +316,13 @@ export function VoiceCall({
             className="relative flex h-24 w-24 items-center justify-center rounded-full shadow-xl"
             style={{
               background:
-                state === "thinking"
+                state === "thinking" || state === "connecting"
                   ? "linear-gradient(135deg, #fff, #e5e7eb)"
                   : "linear-gradient(135deg, #ffb900, #ffd166)",
               color: "#030957",
             }}
           >
-            {state === "thinking" ? (
+            {state === "thinking" || state === "connecting" ? (
               <Loader2 className="h-8 w-8 animate-spin" />
             ) : muted ? (
               <MicOff className="h-8 w-8" />
@@ -335,16 +335,19 @@ export function VoiceCall({
         <div className="text-center text-sm opacity-90">
           {error
             ? error
-            : state === "listening"
-            ? "أستمع إليك..."
-            : state === "thinking"
-            ? "أفكر في الرد..."
-            : state === "speaking"
-            ? "يتحدث..."
-            : muted
-            ? "الميكروفون مكتوم"
-            : "على وشك الاستماع..."}
+            : state === "connecting"
+              ? "جاري الاتصال..."
+              : state === "listening"
+                ? "أستمع إليك..."
+                : state === "thinking"
+                  ? "أفكر في الرد..."
+                  : state === "speaking"
+                    ? "يتحدث..."
+                    : muted
+                      ? "الميكروفون مكتوم"
+                      : "على وشك الاستماع..."}
         </div>
+
 
         {caption && (
           <div className="max-w-xs rounded-xl bg-white/10 px-3 py-2 text-center text-xs leading-relaxed backdrop-blur">
