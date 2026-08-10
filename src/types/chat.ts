@@ -31,6 +31,10 @@ export interface ChatMessage {
   content: string;
   files?: ChatFile[];
   timestamp: number;
+  /** True when this bubble represents a failed reply (shows retry). */
+  failed?: boolean;
+  /** The user message id this failed reply belongs to. */
+  retryOf?: string;
 }
 
 export type ExportFormat = "txt" | "json" | "md";
