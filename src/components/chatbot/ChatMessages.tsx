@@ -122,12 +122,29 @@ export function ChatMessages({
   voiceRepliesEnabled,
   speakingMessageId,
   onToggleSpeak,
+  onRetry,
   onSuggestion,
 }: ChatMessagesProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [pinned, setPinned] = useState(true);
+
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    bottomRef.current?.scrollIntoView({ behavior, block: "end" });
+    setPinned(true);
+  }, []);
+
+  // Track whether the user is reading history; never yank them back down.
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setPinned(distance < 80);
+  }, []);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    if (pinned) scrollToBottom();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, isThinking]);
 
   if (messages.length === 0 && !isThinking) {
@@ -139,7 +156,23 @@ export function ChatMessages({
   }
 
   return (
-    <div className="azab-scroll flex-1 space-y-4 overflow-y-auto px-4 py-4">
+    <div className="relative flex flex-1 overflow-hidden">
+      {!pinned && (
+        <button
+          type="button"
+          onClick={() => scrollToBottom()}
+          className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-[#030957] px-3 py-2 text-xs font-medium text-white shadow-lg transition hover:bg-[#0a1170] focus:outline-none focus:ring-2 focus:ring-[#ffb900]"
+        >
+          <ArrowDown className="h-3.5 w-3.5" />
+          العودة لآخر رسالة
+        </button>
+      )}
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="azab-scroll flex-1 space-y-4 overflow-y-auto overflow-x-hidden px-4 py-4 overscroll-contain"
+      >
+
       {messages.map((m) => {
         const isUser = m.role === "user";
         const isSpeaking = speakingMessageId === m.id;
