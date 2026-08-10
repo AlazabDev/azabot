@@ -82,7 +82,7 @@ export function ChatHeader({
             <span
               className={cn(
                 "h-2 w-2 rounded-full",
-                status === "thinking" && "animate-pulse",
+                PULSING.includes(status) && "animate-pulse",
               )}
               style={{ backgroundColor: STATUS_DOT[status] }}
             />
