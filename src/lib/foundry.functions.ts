@@ -224,9 +224,13 @@ export const foundryRealtimeSession = createServerFn({ method: "POST" })
         body: JSON.stringify({
           model: deployment,
           voice: "alloy",
+          modalities: ["audio", "text"],
+          input_audio_transcription: { model: "whisper-1" },
+          turn_detection: { type: "server_vad" },
           instructions:
             "You are Azab Assistant. Respond concisely in the user's language (Arabic or English).",
         }),
+
       });
       if (!res.ok) {
         console.error(
