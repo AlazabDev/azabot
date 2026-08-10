@@ -1,13 +1,18 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   ChatFile,
   ChatMessage,
+  ChatPhase,
   ChatSettingsState,
-  ChatStatus,
   ExportFormat,
 } from "@/types/chat";
 import { sendChatMessage } from "@/lib/chatApi";
 import { downloadChat } from "@/lib/chatExport";
+import {
+  CHAT_ERROR_MESSAGES,
+  classifyChatError,
+  logChatError,
+} from "@/lib/chatErrors";
 import {
   detectLanguage,
   getSpeechRecognition,
@@ -32,6 +37,12 @@ interface ChatWindowProps {
   onClose: () => void;
 }
 
+/** Raw File objects can't be persisted, so keep them per-session for retries. */
+interface PendingPayload {
+  text: string;
+  rawFiles: File[];
+}
+
 export function ChatWindow({
   open,
   messages,
@@ -42,16 +53,18 @@ export function ChatWindow({
   setSettings,
   onClose,
 }: ChatWindowProps) {
-  const [status, setStatus] = useState<ChatStatus>("online");
-  const [isThinking, setIsThinking] = useState(false);
-  const [isListening, setIsListening] = useState(false);
+  const [phase, setPhase] = useState<ChatPhase>("idle");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [speakingId, setSpeakingId] = useState<string | null>(null);
   const [callOpen, setCallOpen] = useState(false);
 
   const inputRef = useRef<ChatInputHandle>(null);
   const recognitionRef = useRef<ReturnType<typeof getSpeechRecognition>>(null);
+  const pendingRef = useRef<Map<string, PendingPayload>>(new Map());
   const voiceSupported = isSpeechRecognitionSupported();
+
+  const busy = phase === "connecting" || phase === "streaming";
+  const isListening = phase === "listening";
 
   useEffect(() => {
     if (open) {
@@ -67,6 +80,77 @@ export function ChatWindow({
     };
   }, []);
 
+  // Network awareness — offline is an explicit phase, not a hidden boolean.
+  useEffect(() => {
+    const goOffline = () => setPhase("offline");
+    const goOnline = () => setPhase((p) => (p === "offline" ? "idle" : p));
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      setPhase("offline");
+    }
+    window.addEventListener("offline", goOffline);
+    window.addEventListener("online", goOnline);
+    return () => {
+      window.removeEventListener("offline", goOffline);
+      window.removeEventListener("online", goOnline);
+    };
+  }, []);
+
+  const runRequest = useCallback(
+    async (userMsgId: string, payload: PendingPayload) => {
+      setPhase("connecting");
+      try {
+        const res = await sendChatMessage({
+          message: payload.text,
+          conversationId,
+          files: payload.rawFiles,
+          metadata: {
+            language: detectLanguage(payload.text),
+            source: "web-widget",
+            voiceEnabled: settings.voiceReplies,
+          },
+        });
+        if (res.conversationId && res.conversationId !== conversationId) {
+          setConversationId(res.conversationId);
+        }
+        const assistantMsg: ChatMessage = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: res.reply,
+          timestamp: Date.now(),
+        };
+        setMessages((prev) => [...prev, assistantMsg]);
+        pendingRef.current.delete(userMsgId);
+        setPhase("completed");
+        if (settings.voiceReplies) {
+          setSpeakingId(assistantMsg.id);
+          speak(
+            assistantMsg.content,
+            detectLanguage(assistantMsg.content),
+            settings.voiceURI,
+          );
+        }
+      } catch (err) {
+        logChatError("send", err);
+        const kind = classifyChatError(err);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content: CHAT_ERROR_MESSAGES[kind],
+            timestamp: Date.now(),
+            failed: true,
+            retryOf: userMsgId,
+          },
+        ]);
+        setPhase(kind === "offline" ? "offline" : "error");
+      } finally {
+        setTimeout(() => inputRef.current?.focus(), 30);
+      }
+    },
+    [conversationId, setConversationId, setMessages, settings.voiceReplies, settings.voiceURI],
+  );
+
   const handleSend = async (
     text: string,
     files: ChatFile[],
@@ -80,53 +164,24 @@ export function ChatWindow({
       timestamp: Date.now(),
     };
     setMessages((prev) => [...prev, userMsg]);
-    setIsThinking(true);
-    setStatus("thinking");
+    pendingRef.current.set(userMsg.id, { text, rawFiles });
+    await runRequest(userMsg.id, { text, rawFiles });
+  };
 
-    try {
-      const res = await sendChatMessage({
-        message: text,
-        conversationId,
-        files: rawFiles,
-        metadata: {
-          language: detectLanguage(text),
-          source: "web-widget",
-          voiceEnabled: settings.voiceReplies,
-        },
-      });
-      if (res.conversationId && res.conversationId !== conversationId) {
-        setConversationId(res.conversationId);
-      }
-      const assistantMsg: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: res.reply,
-        timestamp: Date.now(),
-      };
-      setMessages((prev) => [...prev, assistantMsg]);
-      if (settings.voiceReplies) {
-        setSpeakingId(assistantMsg.id);
-        speak(
-          assistantMsg.content,
-          detectLanguage(assistantMsg.content),
-          settings.voiceURI,
-        );
+  /** Resend the last user message without duplicating any bubble. */
+  const handleRetry = async (failedMsg: ChatMessage) => {
+    if (busy) return;
+    const userMsgId = failedMsg.retryOf;
+    if (!userMsgId) return;
+    const userMsg = messages.find((m) => m.id === userMsgId);
+    if (!userMsg) return;
 
-      }
-    } catch (err) {
-      const errorMsg: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: `حدث خطأ أثناء الإرسال: ${(err as Error).message}`,
-        timestamp: Date.now(),
-      };
-      setMessages((prev) => [...prev, errorMsg]);
-    } finally {
-      setIsThinking(false);
-      setStatus("online");
-      setTimeout(() => inputRef.current?.focus(), 30);
-    }
-
+    // Remove only the failed reply bubble; the user bubble stays as-is.
+    setMessages((prev) => prev.filter((m) => m.id !== failedMsg.id));
+    const payload =
+      pendingRef.current.get(userMsgId) ??
+      ({ text: userMsg.content, rawFiles: [] } satisfies PendingPayload);
+    await runRequest(userMsgId, payload);
   };
 
   const handleToggleVoice = () => {
@@ -153,19 +208,14 @@ export function ChatWindow({
       if (evt.error === "not-allowed" || evt.error === "service-not-allowed") {
         alert("تم رفض صلاحية الميكروفون. يرجى السماح بالوصول من إعدادات المتصفح.");
       }
-      setIsListening(false);
-      setStatus("online");
+      setPhase("idle");
     };
-    rec.onend = () => {
-      setIsListening(false);
-      setStatus("online");
-    };
+    rec.onend = () => setPhase((p) => (p === "listening" ? "idle" : p));
     try {
       rec.start();
-      setIsListening(true);
-      setStatus("listening");
+      setPhase("listening");
     } catch {
-      setIsListening(false);
+      setPhase("idle");
     }
   };
 
@@ -177,9 +227,11 @@ export function ChatWindow({
   const handleClear = () => {
     if (!confirm("هل تريد بالتأكيد مسح المحادثة؟")) return;
     setMessages([]);
+    pendingRef.current.clear();
     setSettingsOpen(false);
     stopSpeaking();
     setSpeakingId(null);
+    setPhase("idle");
   };
 
   const handleNewChat = () => {
@@ -189,9 +241,11 @@ export function ChatWindow({
     stopSpeaking();
     setSpeakingId(null);
     setMessages([]);
+    pendingRef.current.clear();
     setConversationId("");
     setSettingsOpen(false);
     setCallOpen(false);
+    setPhase("idle");
     setTimeout(() => inputRef.current?.focus(), 30);
   };
 
@@ -212,11 +266,15 @@ export function ChatWindow({
       dir="rtl"
       role="dialog"
       aria-label="Azab Assistant"
-      className="azab-pop-in fixed bottom-24 right-4 z-[9998] flex h-[min(640px,calc(100dvh-7rem))] w-[min(380px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl bg-white sm:right-6"
-      style={{ boxShadow: "var(--azab-shadow)" }}
+      className="azab-pop-in fixed inset-0 z-[9998] flex flex-col overflow-hidden bg-white sm:inset-auto sm:bottom-24 sm:right-6 sm:h-[min(640px,calc(100dvh-7rem))] sm:w-[380px] sm:rounded-2xl"
+      style={{
+        boxShadow: "var(--azab-shadow)",
+        paddingTop: "env(safe-area-inset-top)",
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
     >
       <ChatHeader
-        status={status}
+        status={phase}
         onClose={onClose}
         onDownload={handleDownload}
         onToggleSettings={() => setSettingsOpen((v) => !v)}
@@ -237,17 +295,26 @@ export function ChatWindow({
 
         <ChatMessages
           messages={messages}
-          isThinking={isThinking}
+          isThinking={busy}
           voiceRepliesEnabled={settings.voiceReplies}
           speakingMessageId={speakingId}
           onToggleSpeak={handleToggleSpeak}
+          onRetry={handleRetry}
           onSuggestion={(t) => inputRef.current?.setText(t)}
         />
 
+        {phase === "offline" && (
+          <div
+            role="status"
+            className="border-t border-black/5 bg-[#fff8e0] px-3 py-2 text-center text-xs text-[#030957]"
+          >
+            {CHAT_ERROR_MESSAGES.offline}
+          </div>
+        )}
 
         <ChatInput
           ref={inputRef}
-          disabled={isThinking}
+          disabled={busy}
           isListening={isListening}
           voiceSupported={voiceSupported}
           onSend={handleSend}
