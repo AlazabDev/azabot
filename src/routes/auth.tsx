@@ -1,10 +1,18 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, LogIn } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
+type AuthSearch = { reason?: "signin" | "forbidden" | "error" };
+
 export const Route = createFileRoute("/auth")({
   ssr: false,
+  validateSearch: (search: Record<string, unknown>): AuthSearch => {
+    const reason = search.reason;
+    return reason === "forbidden" || reason === "error" || reason === "signin"
+      ? { reason }
+      : {};
+  },
   head: () => ({
     meta: [
       { title: "تسجيل الدخول — عزبوت" },
