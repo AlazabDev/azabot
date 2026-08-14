@@ -1,10 +1,18 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, LogIn } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
+type AuthSearch = { reason?: "signin" | "forbidden" | "error" };
+
 export const Route = createFileRoute("/auth")({
   ssr: false,
+  validateSearch: (search: Record<string, unknown>): AuthSearch => {
+    const reason = search.reason;
+    return reason === "forbidden" || reason === "error" || reason === "signin"
+      ? { reason }
+      : {};
+  },
   head: () => ({
     meta: [
       { title: "تسجيل الدخول — عزبوت" },
@@ -18,10 +26,30 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
+  const { reason } = Route.useSearch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [signedInEmail, setSignedInEmail] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    reason === "forbidden"
+      ? "هذا الحساب لا يملك صلاحية مدير للوصول إلى لوحة التحكم."
+      : reason === "error"
+        ? "تعذر التحقق من الصلاحيات حاليًا. حاول مرة أخرى."
+        : null,
+  );
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      if (!alive) return;
+      setSignedInEmail(data.user?.email ?? null);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,10 +61,21 @@ function AuthPage() {
     });
     setLoading(false);
     if (signInError) {
-      setError("بيانات الدخول غير صحيحة.");
+      if (import.meta.env.DEV) console.error("[auth] signIn failed", signInError);
+      setError(
+        signInError.message.toLowerCase().includes("confirm")
+          ? "لم يتم تأكيد البريد الإلكتروني بعد."
+          : "بيانات الدخول غير صحيحة.",
+      );
       return;
     }
     navigate({ to: "/admin", replace: true });
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setSignedInEmail(null);
+    setError(null);
   };
 
   return (
@@ -73,6 +112,19 @@ function AuthPage() {
         </label>
 
         {error && <p className="mt-3 text-xs text-red-600">{error}</p>}
+
+        {signedInEmail && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            أنت مسجّل حاليًا بحساب <span dir="ltr">{signedInEmail}</span>{" "}
+            <button
+              type="button"
+              onClick={signOut}
+              className="font-semibold text-[#030957] underline"
+            >
+              تسجيل الخروج
+            </button>
+          </p>
+        )}
 
         <button
           type="submit"
