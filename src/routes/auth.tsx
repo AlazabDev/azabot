@@ -113,6 +113,19 @@ function AuthPage() {
 
         {error && <p className="mt-3 text-xs text-red-600">{error}</p>}
 
+        {signedInEmail && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            أنت مسجّل حاليًا بحساب <span dir="ltr">{signedInEmail}</span>{" "}
+            <button
+              type="button"
+              onClick={signOut}
+              className="font-semibold text-[#030957] underline"
+            >
+              تسجيل الخروج
+            </button>
+          </p>
+        )}
+
         <button
           type="submit"
           disabled={loading}
