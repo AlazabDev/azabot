@@ -7,14 +7,18 @@ export const Route = createFileRoute("/admin")({
   beforeLoad: async () => {
     const { data: userData, error: userErr } = await supabase.auth.getUser();
     if (userErr || !userData.user) {
-      throw redirect({ to: "/auth" });
+      throw redirect({ to: "/auth", search: { reason: "signin" } });
     }
     const { data: isAdmin, error: roleErr } = await supabase.rpc("has_role", {
       _user_id: userData.user.id,
       _role: "admin",
     });
-    if (roleErr || !isAdmin) {
-      throw redirect({ to: "/auth" });
+    if (roleErr) {
+      if (import.meta.env.DEV) console.error("[admin] has_role failed", roleErr);
+      throw redirect({ to: "/auth", search: { reason: "error" } });
+    }
+    if (!isAdmin) {
+      throw redirect({ to: "/auth", search: { reason: "forbidden" } });
     }
   },
   component: AdminLayout,
