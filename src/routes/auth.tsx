@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Loader2, LogIn } from "lucide-react";
+import { Loader2, LogIn, ShieldAlert, MailCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 type AuthSearch = { reason?: "signin" | "forbidden" | "error" };
@@ -31,6 +31,8 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [signedInEmail, setSignedInEmail] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [resetting, setResetting] = useState(false);
   const [error, setError] = useState<string | null>(
     reason === "forbidden"
       ? "هذا الحساب لا يملك صلاحية مدير للوصول إلى لوحة التحكم."
@@ -55,6 +57,7 @@ function AuthPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
+    setNotice(null);
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password,
@@ -70,6 +73,26 @@ function AuthPage() {
       return;
     }
     navigate({ to: "/admin", replace: true });
+  };
+
+  const sendReset = async () => {
+    const target = (email || signedInEmail || "").trim();
+    if (!target) {
+      setError("اكتب بريدك الإلكتروني أولاً لإرسال رابط إعادة التعيين.");
+      return;
+    }
+    setError(null);
+    setResetting(true);
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(target, {
+      redirectTo: `${window.location.origin}/auth`,
+    });
+    setResetting(false);
+    setNotice(
+      resetError
+        ? null
+        : `تم إرسال رابط إعادة تعيين كلمة المرور إلى ${target}. تحقق من بريدك.`,
+    );
+    if (resetError) setError("تعذر إرسال رابط إعادة التعيين حاليًا.");
   };
 
   const signOut = async () => {
@@ -111,7 +134,23 @@ function AuthPage() {
           />
         </label>
 
+        {reason === "forbidden" && (
+          <div className="mt-4 flex gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+            <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              الحساب {signedInEmail ? <span dir="ltr">{signedInEmail}</span> : "الحالي"} ليس لديه
+              صلاحية مدير. سجّل الخروج ثم ادخل بحساب مدير، أو اطلب من مدير النظام منحك الصلاحية.
+            </div>
+          </div>
+        )}
+
         {error && <p className="mt-3 text-xs text-red-600">{error}</p>}
+        {notice && (
+          <p className="mt-3 flex items-center gap-1.5 text-xs text-emerald-700">
+            <MailCheck className="h-3.5 w-3.5" />
+            {notice}
+          </p>
+        )}
 
         {signedInEmail && (
           <p className="mt-3 text-xs text-muted-foreground">
@@ -133,6 +172,15 @@ function AuthPage() {
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
           دخول
+        </button>
+
+        <button
+          type="button"
+          onClick={sendReset}
+          disabled={resetting}
+          className="mt-3 w-full text-center text-xs text-muted-foreground underline transition hover:text-[#030957] disabled:opacity-60"
+        >
+          {resetting ? "جارٍ الإرسال…" : "نسيت كلمة المرور؟"}
         </button>
       </form>
     </div>
