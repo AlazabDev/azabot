@@ -34,11 +34,7 @@ function AuthPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [resetting, setResetting] = useState(false);
   const [error, setError] = useState<string | null>(
-    reason === "forbidden"
-      ? "هذا الحساب لا يملك صلاحية مدير للوصول إلى لوحة التحكم."
-      : reason === "error"
-        ? "تعذر التحقق من الصلاحيات حاليًا. حاول مرة أخرى."
-        : null,
+    reason === "error" ? "تعذر التحقق من الصلاحيات حاليًا. حاول مرة أخرى." : null,
   );
 
   useEffect(() => {
