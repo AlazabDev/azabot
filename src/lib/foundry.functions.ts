@@ -19,7 +19,10 @@ interface FoundryChatInput {
   threadId?: string | null;
   message: string;
   attachments?: FoundryAttachment[];
+  /** Optional bot_agents.id to route the message to a specific agent. */
+  agentId?: string | null;
 }
+
 
 function getBase(): string {
   const base = process.env.FOUNDRY_PROJECT_ENDPOINT;
@@ -120,6 +123,7 @@ export const foundryChat = createServerFn({ method: "POST" })
     }
     return {
       threadId: typeof data.threadId === "string" ? data.threadId : null,
+      agentId: typeof data.agentId === "string" && data.agentId ? data.agentId : null,
       message: data.message.slice(0, 8000),
       attachments: Array.isArray(data.attachments)
         ? data.attachments
@@ -136,13 +140,20 @@ export const foundryChat = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     try {
+      const { resolveAgent } = await import("@/lib/agents.server");
+      const agent = await resolveAgent(data.agentId);
+
       const agentName =
-        process.env.FOUNDRY_AGENT_NAME || process.env.FOUNDRY_AGENT_ID;
+        agent?.agent_name ||
+        process.env.FOUNDRY_AGENT_NAME ||
+        process.env.FOUNDRY_AGENT_ID;
       if (!agentName) throw new Error("FOUNDRY_AGENT_NAME is not configured");
       const agentVersion =
+        agent?.agent_version ||
         process.env.FOUNDRY_AGENT_VER ||
         process.env.FOUNDRY_AGENT_VERSION ||
         "1";
+
 
       // 1) Build the user message content parts.
       const contentParts: Array<Record<string, unknown>> = [];
@@ -190,14 +201,25 @@ export const foundryChat = createServerFn({ method: "POST" })
         },
       };
 
+      // System instructions are server-owned (from the agent record only).
+      if (agent?.system_prompt) body.instructions = agent.system_prompt;
+      if (agent) body.temperature = agent.temperature;
+
       if (!itemsSent) body.input = [userItem];
 
+      const startedAt = Date.now();
       const result = await foundryFetch<ResponsesResult>("/responses", {
         method: "POST",
         body: JSON.stringify(body),
       });
 
-      return { threadId: signThreadId(conversationId), reply: extractText(result) };
+      return {
+        threadId: signThreadId(conversationId),
+        reply: extractText(result),
+        agent: agent ? { id: agent.id, name: agent.name } : null,
+        latencyMs: Date.now() - startedAt,
+      };
+
     } catch (err) {
       if (
         err instanceof Error &&

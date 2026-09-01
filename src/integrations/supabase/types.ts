@@ -178,6 +178,60 @@ export type Database = {
         }
         Relationships: []
       }
+      bot_agents: {
+        Row: {
+          agent_name: string | null
+          agent_version: string
+          created_at: string
+          deployment: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          is_default: boolean
+          max_tokens: number
+          name: string
+          provider: string
+          sort_order: number
+          system_prompt: string
+          temperature: number
+          updated_at: string
+        }
+        Insert: {
+          agent_name?: string | null
+          agent_version?: string
+          created_at?: string
+          deployment?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          max_tokens?: number
+          name: string
+          provider?: string
+          sort_order?: number
+          system_prompt?: string
+          temperature?: number
+          updated_at?: string
+        }
+        Update: {
+          agent_name?: string | null
+          agent_version?: string
+          created_at?: string
+          deployment?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          max_tokens?: number
+          name?: string
+          provider?: string
+          sort_order?: number
+          system_prompt?: string
+          temperature?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       bot_sessions: {
         Row: {
           client_email: string | null
