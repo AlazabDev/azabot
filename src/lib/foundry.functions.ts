@@ -19,7 +19,10 @@ interface FoundryChatInput {
   threadId?: string | null;
   message: string;
   attachments?: FoundryAttachment[];
+  /** Optional bot_agents.id to route the message to a specific agent. */
+  agentId?: string | null;
 }
+
 
 function getBase(): string {
   const base = process.env.FOUNDRY_PROJECT_ENDPOINT;
