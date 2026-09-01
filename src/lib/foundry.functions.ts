@@ -123,6 +123,7 @@ export const foundryChat = createServerFn({ method: "POST" })
     }
     return {
       threadId: typeof data.threadId === "string" ? data.threadId : null,
+      agentId: typeof data.agentId === "string" && data.agentId ? data.agentId : null,
       message: data.message.slice(0, 8000),
       attachments: Array.isArray(data.attachments)
         ? data.attachments
@@ -139,13 +140,20 @@ export const foundryChat = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     try {
+      const { resolveAgent } = await import("@/lib/agents.server");
+      const agent = await resolveAgent(data.agentId);
+
       const agentName =
-        process.env.FOUNDRY_AGENT_NAME || process.env.FOUNDRY_AGENT_ID;
+        agent?.agent_name ||
+        process.env.FOUNDRY_AGENT_NAME ||
+        process.env.FOUNDRY_AGENT_ID;
       if (!agentName) throw new Error("FOUNDRY_AGENT_NAME is not configured");
       const agentVersion =
+        agent?.agent_version ||
         process.env.FOUNDRY_AGENT_VER ||
         process.env.FOUNDRY_AGENT_VERSION ||
         "1";
+
 
       // 1) Build the user message content parts.
       const contentParts: Array<Record<string, unknown>> = [];
