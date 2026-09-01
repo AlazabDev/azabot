@@ -201,14 +201,25 @@ export const foundryChat = createServerFn({ method: "POST" })
         },
       };
 
+      // System instructions are server-owned (from the agent record only).
+      if (agent?.system_prompt) body.instructions = agent.system_prompt;
+      if (agent) body.temperature = agent.temperature;
+
       if (!itemsSent) body.input = [userItem];
 
+      const startedAt = Date.now();
       const result = await foundryFetch<ResponsesResult>("/responses", {
         method: "POST",
         body: JSON.stringify(body),
       });
 
-      return { threadId: signThreadId(conversationId), reply: extractText(result) };
+      return {
+        threadId: signThreadId(conversationId),
+        reply: extractText(result),
+        agent: agent ? { id: agent.id, name: agent.name } : null,
+        latencyMs: Date.now() - startedAt,
+      };
+
     } catch (err) {
       if (
         err instanceof Error &&
