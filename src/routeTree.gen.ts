@@ -14,6 +14,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAgentsRouteImport } from './routes/admin.agents'
+import { Route as AdminChatRouteImport } from './routes/admin.chat'
 import { Route as AdminIntegrationRouteImport } from './routes/admin.integration'
 import { Route as AdminKnowledgeRouteImport } from './routes/admin.knowledge'
 import { Route as AdminTrainingRouteImport } from './routes/admin.training'
@@ -43,6 +44,11 @@ const AdminAgentsRoute = AdminAgentsRouteImport.update({
   path: '/agents',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminChatRoute = AdminChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminIntegrationRoute = AdminIntegrationRouteImport.update({
   id: '/integration',
   path: '/integration',
@@ -64,6 +70,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRoute
   '/admin/agents': typeof AdminAgentsRoute
+  '/admin/chat': typeof AdminChatRoute
   '/admin/integration': typeof AdminIntegrationRoute
   '/admin/knowledge': typeof AdminKnowledgeRoute
   '/admin/training': typeof AdminTrainingRoute
@@ -73,6 +80,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/admin/agents': typeof AdminAgentsRoute
+  '/admin/chat': typeof AdminChatRoute
   '/admin/integration': typeof AdminIntegrationRoute
   '/admin/knowledge': typeof AdminKnowledgeRoute
   '/admin/training': typeof AdminTrainingRoute
@@ -84,6 +92,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRoute
   '/admin/agents': typeof AdminAgentsRoute
+  '/admin/chat': typeof AdminChatRoute
   '/admin/integration': typeof AdminIntegrationRoute
   '/admin/knowledge': typeof AdminKnowledgeRoute
   '/admin/training': typeof AdminTrainingRoute
@@ -96,6 +105,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/admin/agents'
+    | '/admin/chat'
     | '/admin/integration'
     | '/admin/knowledge'
     | '/admin/training'
@@ -105,6 +115,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/admin/agents'
+    | '/admin/chat'
     | '/admin/integration'
     | '/admin/knowledge'
     | '/admin/training'
@@ -115,6 +126,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/admin/agents'
+    | '/admin/chat'
     | '/admin/integration'
     | '/admin/knowledge'
     | '/admin/training'
@@ -164,6 +176,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAgentsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/chat': {
+      id: '/admin/chat'
+      path: '/chat'
+      fullPath: '/admin/chat'
+      preLoaderRoute: typeof AdminChatRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/integration': {
       id: '/admin/integration'
       path: '/integration'
@@ -190,6 +209,7 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteChildren {
   AdminAgentsRoute: typeof AdminAgentsRoute
+  AdminChatRoute: typeof AdminChatRoute
   AdminIntegrationRoute: typeof AdminIntegrationRoute
   AdminKnowledgeRoute: typeof AdminKnowledgeRoute
   AdminTrainingRoute: typeof AdminTrainingRoute
@@ -198,6 +218,7 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAgentsRoute: AdminAgentsRoute,
+  AdminChatRoute: AdminChatRoute,
   AdminIntegrationRoute: AdminIntegrationRoute,
   AdminKnowledgeRoute: AdminKnowledgeRoute,
   AdminTrainingRoute: AdminTrainingRoute,
