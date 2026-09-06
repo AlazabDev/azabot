@@ -201,9 +201,9 @@ export const foundryChat = createServerFn({ method: "POST" })
         },
       };
 
-      // System instructions are server-owned (from the agent record only).
-      if (agent?.system_prompt) body.instructions = agent.system_prompt;
-      if (agent) body.temperature = agent.temperature;
+      // Note: Foundry rejects `instructions`/`temperature` when an agent
+      // reference is supplied — those live on the agent definition itself.
+
 
       if (!itemsSent) body.input = [userItem];
 
