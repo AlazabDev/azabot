@@ -229,7 +229,7 @@ export const foundryChat = createServerFn({ method: "POST" })
         const fallbackBody: Record<string, unknown> = {
           model,
           conversation: conversationId,
-          ...(itemsSent ? {} : { input: [userItem] }),
+          input: [userItem],
         };
         if (agent?.system_prompt) fallbackBody.instructions = agent.system_prompt;
         if (typeof agent?.temperature === "number") fallbackBody.temperature = agent.temperature;
