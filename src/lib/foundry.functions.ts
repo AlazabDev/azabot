@@ -71,6 +71,9 @@ function verifyThreadToken(token: string): string | null {
   }
 }
 
+/** Raised when the agent definition requires an end-user Entra token. */
+const E_USER_SCOPE = "E_USER_SCOPE";
+
 async function foundryFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const url = `${getBase()}${V1_PATH}${path}`;
   const res = await fetch(url, {
@@ -82,10 +85,12 @@ async function foundryFetch<T>(path: string, init: RequestInit = {}): Promise<T>
     // Log server-side; do not leak provider details to the client.
     console.error(`[Foundry] ${res.status} ${path}: ${text.slice(0, 1000)}`);
     if (res.status === 429) throw new Error("E_RATE_LIMIT");
+    if (/aml-user-token|\{\{\$userId\}\}/i.test(text)) throw new Error(E_USER_SCOPE);
     throw new Error(GENERIC_CHAT_ERROR);
   }
   return (await res.json()) as T;
 }
+
 
 interface ResponsesResult {
   output_text?: string;
@@ -208,10 +213,33 @@ export const foundryChat = createServerFn({ method: "POST" })
       if (!itemsSent) body.input = [userItem];
 
       const startedAt = Date.now();
-      const result = await foundryFetch<ResponsesResult>("/responses", {
-        method: "POST",
-        body: JSON.stringify(body),
-      });
+      let result: ResponsesResult;
+      try {
+        result = await foundryFetch<ResponsesResult>("/responses", {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+      } catch (err) {
+        if (!(err instanceof Error) || err.message !== E_USER_SCOPE) throw err;
+        // The agent definition is bound to a per-user identity scope, which an
+        // API key cannot satisfy. Fall back to the model deployment directly,
+        // applying the agent's own prompt/temperature settings.
+        const model = agent?.deployment || process.env.FOUNDRY_MODEL;
+        if (!model) throw new Error(GENERIC_CHAT_ERROR);
+        const fallbackBody: Record<string, unknown> = {
+          model,
+          conversation: conversationId,
+          input: [userItem],
+        };
+        if (agent?.system_prompt) fallbackBody.instructions = agent.system_prompt;
+        // `temperature` is unsupported on reasoning-class deployments; skip it.
+        if (typeof agent?.max_tokens === "number") fallbackBody.max_output_tokens = agent.max_tokens;
+
+        result = await foundryFetch<ResponsesResult>("/responses", {
+          method: "POST",
+          body: JSON.stringify(fallbackBody),
+        });
+      }
 
       return {
         threadId: signThreadId(conversationId),
@@ -219,6 +247,7 @@ export const foundryChat = createServerFn({ method: "POST" })
         agent: agent ? { id: agent.id, name: agent.name } : null,
         latencyMs: Date.now() - startedAt,
       };
+
 
     } catch (err) {
       if (
