@@ -213,10 +213,32 @@ export const foundryChat = createServerFn({ method: "POST" })
       if (!itemsSent) body.input = [userItem];
 
       const startedAt = Date.now();
-      const result = await foundryFetch<ResponsesResult>("/responses", {
-        method: "POST",
-        body: JSON.stringify(body),
-      });
+      let result: ResponsesResult;
+      try {
+        result = await foundryFetch<ResponsesResult>("/responses", {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+      } catch (err) {
+        if (!(err instanceof Error) || err.message !== E_USER_SCOPE) throw err;
+        // The agent definition is bound to a per-user identity scope, which an
+        // API key cannot satisfy. Fall back to the model deployment directly,
+        // applying the agent's own prompt/temperature settings.
+        const model = agent?.deployment || process.env.FOUNDRY_MODEL;
+        if (!model) throw new Error(GENERIC_CHAT_ERROR);
+        const fallbackBody: Record<string, unknown> = {
+          model,
+          conversation: conversationId,
+          ...(itemsSent ? {} : { input: [userItem] }),
+        };
+        if (agent?.system_prompt) fallbackBody.instructions = agent.system_prompt;
+        if (typeof agent?.temperature === "number") fallbackBody.temperature = agent.temperature;
+        if (typeof agent?.max_tokens === "number") fallbackBody.max_output_tokens = agent.max_tokens;
+        result = await foundryFetch<ResponsesResult>("/responses", {
+          method: "POST",
+          body: JSON.stringify(fallbackBody),
+        });
+      }
 
       return {
         threadId: signThreadId(conversationId),
@@ -224,6 +246,7 @@ export const foundryChat = createServerFn({ method: "POST" })
         agent: agent ? { id: agent.id, name: agent.name } : null,
         latencyMs: Date.now() - startedAt,
       };
+
 
     } catch (err) {
       if (
