@@ -232,8 +232,9 @@ export const foundryChat = createServerFn({ method: "POST" })
           input: [userItem],
         };
         if (agent?.system_prompt) fallbackBody.instructions = agent.system_prompt;
-        if (typeof agent?.temperature === "number") fallbackBody.temperature = agent.temperature;
+        // `temperature` is unsupported on reasoning-class deployments; skip it.
         if (typeof agent?.max_tokens === "number") fallbackBody.max_output_tokens = agent.max_tokens;
+
         result = await foundryFetch<ResponsesResult>("/responses", {
           method: "POST",
           body: JSON.stringify(fallbackBody),
