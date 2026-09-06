@@ -71,6 +71,9 @@ function verifyThreadToken(token: string): string | null {
   }
 }
 
+/** Raised when the agent definition requires an end-user Entra token. */
+const E_USER_SCOPE = "E_USER_SCOPE";
+
 async function foundryFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const url = `${getBase()}${V1_PATH}${path}`;
   const res = await fetch(url, {
@@ -82,10 +85,12 @@ async function foundryFetch<T>(path: string, init: RequestInit = {}): Promise<T>
     // Log server-side; do not leak provider details to the client.
     console.error(`[Foundry] ${res.status} ${path}: ${text.slice(0, 1000)}`);
     if (res.status === 429) throw new Error("E_RATE_LIMIT");
+    if (/aml-user-token|\{\{\$userId\}\}/i.test(text)) throw new Error(E_USER_SCOPE);
     throw new Error(GENERIC_CHAT_ERROR);
   }
   return (await res.json()) as T;
 }
+
 
 interface ResponsesResult {
   output_text?: string;
