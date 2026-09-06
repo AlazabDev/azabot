@@ -24,8 +24,18 @@ function loadJSON<T>(key: string, fallback: T): T {
   }
 }
 
-export function ChatbotWidget() {
+export function ChatbotWidget({
+  onOpenChange,
+}: {
+  /** Notified whenever the chat window is opened or closed (used by the embed page). */
+  onOpenChange?: (open: boolean) => void;
+} = {}) {
   const [open, setOpen] = useState(false);
+
+  const setOpenState = (next: boolean) => {
+    setOpen(next);
+    onOpenChange?.(next);
+  };
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [settings, setSettings] = useState<ChatSettingsState>(DEFAULT_SETTINGS);
   const [conversationId, setConversationId] = useState<string>("");
@@ -79,9 +89,9 @@ export function ChatbotWidget() {
         setConversationId={setConversationId}
         settings={settings}
         setSettings={setSettings}
-        onClose={() => setOpen(false)}
+        onClose={() => setOpenState(false)}
       />
-      <ChatButton isOpen={open} onClick={() => setOpen((v) => !v)} />
+      <ChatButton isOpen={open} onClick={() => setOpenState(!open)} />
     </>
   );
 }
