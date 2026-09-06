@@ -21,7 +21,7 @@ import {
 import { listAgents } from "@/lib/agents.functions";
 import { sendChatMessage } from "@/lib/chatApi";
 import { foundryChat } from "@/lib/foundry.functions";
-import { toArabicChatError } from "@/lib/chatErrors";
+import { toUserErrorMessage } from "@/lib/chatErrors";
 import { speak } from "@/lib/voice";
 
 export const Route = createFileRoute("/admin/chat")({
@@ -126,7 +126,7 @@ function AdminChatPage() {
         ]);
       }
     } catch (err) {
-      setError(toArabicChatError(err));
+      setError(toUserErrorMessage(err));
     } finally {
       setLoading(false);
     }
