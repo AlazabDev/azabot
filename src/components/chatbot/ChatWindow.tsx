@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import type {
   ChatFile,
   ChatMessage,
@@ -24,11 +24,11 @@ import { VoiceCall } from "./VoiceCall";
 interface ChatWindowProps {
   open: boolean;
   messages: ChatMessage[];
-  setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
+  setMessages: Dispatch<SetStateAction<ChatMessage[]>>;
   conversationId: string;
   setConversationId: (id: string) => void;
   settings: ChatSettingsState;
-  setSettings: React.Dispatch<React.SetStateAction<ChatSettingsState>>;
+  setSettings: Dispatch<SetStateAction<ChatSettingsState>>;
   onClose: () => void;
 }
 
@@ -67,11 +67,7 @@ export function ChatWindow({
     };
   }, []);
 
-  const handleSend = async (
-    text: string,
-    files: ChatFile[],
-    rawFiles: File[],
-  ) => {
+  const handleSend = async (text: string, files: ChatFile[], rawFiles: File[]) => {
     const userMsg: ChatMessage = {
       id: crypto.randomUUID(),
       role: "user",
@@ -203,7 +199,6 @@ export function ChatWindow({
         onStartCall={() => setCallOpen(true)}
         defaultExportFormat={settings.exportFormat}
       />
-
       <div className="relative flex flex-1 flex-col overflow-hidden bg-white">
         {settingsOpen && (
           <ChatSettings
@@ -213,7 +208,6 @@ export function ChatWindow({
             onClose={() => setSettingsOpen(false)}
           />
         )}
-
         <ChatMessages
           messages={messages}
           isThinking={isThinking}
@@ -222,8 +216,6 @@ export function ChatWindow({
           onToggleSpeak={handleToggleSpeak}
           onSuggestion={(t) => inputRef.current?.setText(t)}
         />
-
-
         <ChatInput
           ref={inputRef}
           disabled={isThinking}
@@ -232,7 +224,6 @@ export function ChatWindow({
           onSend={handleSend}
           onToggleVoice={handleToggleVoice}
         />
-
         <VoiceCall
           open={callOpen}
           conversationId={conversationId}
