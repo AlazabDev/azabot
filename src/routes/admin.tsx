@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router";
-import { LayoutDashboard, Plug, GraduationCap, BookOpen, ArrowLeft } from "lucide-react";
+import { LayoutDashboard, Plug, GraduationCap, BookOpen, ArrowLeft, Bot, MessagesSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/admin")({
@@ -27,10 +27,13 @@ export const Route = createFileRoute("/admin")({
 
 const navItems = [
   { to: "/admin", label: "لوحة التحكم", icon: LayoutDashboard, exact: true },
+  { to: "/admin/agents", label: "الوكلاء", icon: Bot },
+  { to: "/admin/chat", label: "دردشة تشغيلية", icon: MessagesSquare },
   { to: "/admin/integration", label: "إعدادات Azure OpenAI", icon: Plug },
   { to: "/admin/training", label: "تدريب البوت", icon: GraduationCap },
   { to: "/admin/knowledge", label: "قاعدة المعرفة", icon: BookOpen },
 ];
+
 
 function AdminLayout() {
   return (
