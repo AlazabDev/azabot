@@ -10,7 +10,6 @@ const corsHeaders = {
 const API_VERSION = Deno.env.get("FOUNDRY_API_VERSION") ?? "2024-12-01-preview";
 const MAX_MESSAGE_LENGTH = 8_000;
 const MAX_ATTACHMENTS = 10;
-const THREAD_TTL_DAYS = 30;
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -76,10 +75,7 @@ async function verifyThreadToken(token: string): Promise<string | null> {
   return diff === 0 ? threadId : null;
 }
 
-async function foundryFetch<T>(
-  path: string,
-  init: RequestInit = {},
-): Promise<T> {
+async function foundryFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const separator = path.includes("?") ? "&" : "?";
   const url = `${getFoundryBase()}${path}${separator}api-version=${API_VERSION}`;
   const response = await fetch(url, {
@@ -120,7 +116,7 @@ function normalizeAttachments(value: unknown) {
     });
 }
 
-async function createThread() {
+async function createThread(): Promise<string> {
   const thread = await foundryFetch<{ id?: string }>("/threads", {
     method: "POST",
     body: JSON.stringify({}),
@@ -136,7 +132,6 @@ async function runChat(input: {
   attachments: ReturnType<typeof normalizeAttachments>;
 }) {
   const agentId = requireEnv("FOUNDRY_AGENT_ID");
-
   let threadId = input.threadToken
     ? await verifyThreadToken(input.threadToken)
     : null;
@@ -184,13 +179,11 @@ async function runChat(input: {
 
   const startedAt = Date.now();
   let status = run.status ?? "queued";
-
   while (
     !["completed", "failed", "cancelled", "expired"].includes(status) &&
     Date.now() - startedAt < 90_000
   ) {
     await new Promise((resolve) => setTimeout(resolve, 900));
-
     const current = await foundryFetch<{
       id?: string;
       status?: string;
@@ -211,7 +204,6 @@ async function runChat(input: {
   const messages = await foundryFetch<{
     data?: Array<{
       role?: string;
-      created_at?: number;
       content?: Array<{ type?: string; text?: { value?: string } }>;
     }>;
   }>(`/threads/${threadId}/messages?limit=10&order=desc`);
@@ -227,12 +219,13 @@ async function runChat(input: {
   return {
     threadId: await signThreadId(threadId),
     reply: reply || "تعذر الحصول على رد حالياً، يرجى المحاولة مرة أخرى.",
-    expiresInDays: THREAD_TTL_DAYS,
   };
 }
 
 async function handle(request: Request): Promise<Response> {
-  if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (request.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
 
   if (request.method === "GET") {
     return json({ ok: true, service: "chatbot", version: 1 });
