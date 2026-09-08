@@ -24,7 +24,9 @@
   var position = (script && script.getAttribute("data-position")) || "right";
   var zIndex = (script && script.getAttribute("data-z-index")) || "2147483000";
 
-  var CLOSED = { width: "132px", height: "150px" };
+  // Keep the closed iframe limited to the launcher and its greeting so it
+  // floats above the host page without changing the host layout or styles.
+  var CLOSED = { width: "280px", height: "170px" };
   var OPEN_DESKTOP = { width: "420px", height: "min(680px, 92vh)" };
 
   var iframe = document.createElement("iframe");
@@ -37,6 +39,8 @@
     "bottom:0",
     position === "left" ? "left:0" : "right:0",
     "border:0",
+    "display:block",
+    "overflow:hidden",
     "background:transparent",
     "color-scheme:normal",
     "z-index:" + zIndex,
