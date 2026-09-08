@@ -98,6 +98,10 @@ interface ResponsesResult {
     type?: string;
     phase?: string;
     role?: string;
+    name?: string;
+    call_id?: string;
+    id?: string;
+    arguments?: string;
     content?: Array<{ type?: string; text?: string | { value?: string } }>;
   }>;
 }
@@ -119,6 +123,52 @@ function extractText(res: ResponsesResult): string {
   }
   return parts.join("\n").trim();
 }
+
+/**
+ * Runs the Responses call and resolves any maintenance tool calls the agent
+ * requests, feeding the results back until it produces a final answer.
+ */
+async function runWithTools(
+  baseBody: Record<string, unknown>,
+  firstInput: Array<Record<string, unknown>> | null,
+): Promise<ResponsesResult> {
+  const { runMaintenanceTool } = await import("@/lib/maintenance.server");
+  let input = firstInput;
+  let result: ResponsesResult = {};
+
+  for (let step = 0; step < 5; step++) {
+    const body = { ...baseBody };
+    if (input) body.input = input;
+    result = await foundryFetch<ResponsesResult>("/responses", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+
+    const calls = (result.output ?? []).filter(
+      (i) => i.type === "function_call" && i.name,
+    );
+    if (!calls.length) return result;
+
+    const followUp: Array<Record<string, unknown>> = [];
+    for (const call of calls) {
+      let args: Record<string, unknown> = {};
+      try {
+        args = call.arguments ? JSON.parse(call.arguments) : {};
+      } catch {
+        args = {};
+      }
+      const out = await runMaintenanceTool(call.name as string, args);
+      followUp.push({
+        type: "function_call_output",
+        call_id: call.call_id || call.id,
+        output: JSON.stringify(out),
+      });
+    }
+    input = followUp;
+  }
+  return result;
+}
+
 
 
 export const foundryChat = createServerFn({ method: "POST" })
