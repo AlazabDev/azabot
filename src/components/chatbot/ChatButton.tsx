@@ -56,7 +56,7 @@ export function ChatButton({ isOpen, onClick }: ChatButtonProps) {
       {showBubble && !isOpen && (
         <div
           dir="rtl"
-          className="azab-pop-in absolute bottom-full right-0 mb-2 w-[240px] rounded-2xl bg-white px-3.5 py-2 text-[13px] font-medium text-[#030957] shadow-lg ring-1 ring-black/5"
+          className="azab-pop-in absolute bottom-full right-0 mb-2 w-[240px] origin-bottom-right rounded-2xl bg-white px-3.5 py-2 text-[13px] font-medium text-[#030957] shadow-lg ring-1 ring-black/5 transition-transform duration-200 hover:scale-[1.03]"
           style={{ minHeight: 36 }}
         >
           <span className="whitespace-pre-wrap leading-relaxed">
@@ -81,7 +81,7 @@ export function ChatButton({ isOpen, onClick }: ChatButtonProps) {
           // Open: 30% smaller so the close control stays discreet.
           isOpen
             ? "h-11 w-11 overflow-hidden rounded-full shadow-xl ring-2 ring-[#ffb900]/70 transition active:scale-95 focus:ring-4 focus:ring-[#ffb900]/50"
-            : "h-16 w-16",
+            : "h-[72px] w-[72px]",
         )}
       >
         {isOpen ? (
