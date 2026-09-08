@@ -98,6 +98,10 @@ interface ResponsesResult {
     type?: string;
     phase?: string;
     role?: string;
+    name?: string;
+    call_id?: string;
+    id?: string;
+    arguments?: string;
     content?: Array<{ type?: string; text?: string | { value?: string } }>;
   }>;
 }
@@ -119,6 +123,52 @@ function extractText(res: ResponsesResult): string {
   }
   return parts.join("\n").trim();
 }
+
+/**
+ * Runs the Responses call and resolves any maintenance tool calls the agent
+ * requests, feeding the results back until it produces a final answer.
+ */
+async function runWithTools(
+  baseBody: Record<string, unknown>,
+  firstInput: Array<Record<string, unknown>> | null,
+): Promise<ResponsesResult> {
+  const { runMaintenanceTool } = await import("@/lib/maintenance.server");
+  let input = firstInput;
+  let result: ResponsesResult = {};
+
+  for (let step = 0; step < 5; step++) {
+    const body = { ...baseBody };
+    if (input) body.input = input;
+    result = await foundryFetch<ResponsesResult>("/responses", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+
+    const calls = (result.output ?? []).filter(
+      (i) => i.type === "function_call" && i.name,
+    );
+    if (!calls.length) return result;
+
+    const followUp: Array<Record<string, unknown>> = [];
+    for (const call of calls) {
+      let args: Record<string, unknown> = {};
+      try {
+        args = call.arguments ? JSON.parse(call.arguments) : {};
+      } catch {
+        args = {};
+      }
+      const out = await runMaintenanceTool(call.name as string, args);
+      followUp.push({
+        type: "function_call_output",
+        call_id: call.call_id || call.id,
+        output: JSON.stringify(out),
+      });
+    }
+    input = followUp;
+  }
+  return result;
+}
+
 
 
 export const foundryChat = createServerFn({ method: "POST" })
@@ -197,6 +247,10 @@ export const foundryChat = createServerFn({ method: "POST" })
       }
 
       // 3) Generate the agent response for this conversation.
+      const { maintenanceTools, maintenanceToolsAvailable, MAINTENANCE_GUIDANCE } =
+        await import("@/lib/maintenance.server");
+      const toolsOn = maintenanceToolsAvailable();
+
       const body: Record<string, unknown> = {
         conversation: conversationId,
         agent_reference: {
@@ -205,41 +259,40 @@ export const foundryChat = createServerFn({ method: "POST" })
           version: agentVersion,
         },
       };
+      if (toolsOn) body.tools = maintenanceTools;
 
       // Note: Foundry rejects `instructions`/`temperature` when an agent
       // reference is supplied — those live on the agent definition itself.
 
-
-      if (!itemsSent) body.input = [userItem];
-
       const startedAt = Date.now();
       let result: ResponsesResult;
       try {
-        result = await foundryFetch<ResponsesResult>("/responses", {
-          method: "POST",
-          body: JSON.stringify(body),
-        });
+        result = await runWithTools(body, itemsSent ? null : [userItem]);
       } catch (err) {
-        if (!(err instanceof Error) || err.message !== E_USER_SCOPE) throw err;
-        // The agent definition is bound to a per-user identity scope, which an
-        // API key cannot satisfy. Fall back to the model deployment directly,
-        // applying the agent's own prompt/temperature settings.
+        if (!(err instanceof Error) || err.message === "E_RATE_LIMIT") throw err;
+        // The agent definition may be bound to a per-user identity scope, which
+        // an API key cannot satisfy. Fall back to the model deployment directly,
+        // applying the agent's own prompt settings.
         const model = agent?.deployment || process.env.FOUNDRY_MODEL;
-        if (!model) throw new Error(GENERIC_CHAT_ERROR);
+        if (!model) throw err;
         const fallbackBody: Record<string, unknown> = {
           model,
           conversation: conversationId,
-          input: [userItem],
         };
-        if (agent?.system_prompt) fallbackBody.instructions = agent.system_prompt;
+        const instructions = [
+          agent?.system_prompt ?? "",
+          toolsOn ? MAINTENANCE_GUIDANCE : "",
+        ]
+          .filter(Boolean)
+          .join("\n\n");
+        if (instructions) fallbackBody.instructions = instructions;
+        if (toolsOn) fallbackBody.tools = maintenanceTools;
         // `temperature` is unsupported on reasoning-class deployments; skip it.
         if (typeof agent?.max_tokens === "number") fallbackBody.max_output_tokens = agent.max_tokens;
 
-        result = await foundryFetch<ResponsesResult>("/responses", {
-          method: "POST",
-          body: JSON.stringify(fallbackBody),
-        });
+        result = await runWithTools(fallbackBody, [userItem]);
       }
+
 
       return {
         threadId: signThreadId(conversationId),
