@@ -4,7 +4,6 @@ import type {
   ChatFile,
 } from "@/types/chat";
 import { supabase } from "@/integrations/supabase/client";
-import { foundryChat } from "@/lib/foundry.functions";
 import { getChatUploadSignedUrl } from "@/lib/chatUploads.functions";
 
 const BUCKET = "chatbot-uploads";
@@ -49,9 +48,8 @@ async function uploadFile(
 }
 
 /**
- * Sends a chat message + files to the Foundry-backed server function.
- * conversationId is an HMAC-signed thread token issued by the server;
- * clients cannot forge or reuse other visitors' thread IDs.
+ * Sends a chat message + files through the Supabase Edge Function.
+ * The Foundry credentials and thread-signing secret remain server-side.
  */
 export async function sendChatMessage({
   message,
@@ -59,31 +57,40 @@ export async function sendChatMessage({
   files,
 }: SendMessageArgs): Promise<ChatApiResponse> {
   const attachments: UploadedAttachment[] = [];
-  // Upload scope is a random per-request folder so paths aren't guessable.
   const scope = crypto.randomUUID();
-  for (const f of files) {
-    attachments.push(await uploadFile(f, scope));
+
+  for (const file of files) {
+    attachments.push(await uploadFile(file, scope));
   }
 
-  // Only forward tokens issued by our own server (contain a signature ".").
   const threadId =
     conversationId && conversationId.includes(".") ? conversationId : null;
 
-  const res = await foundryChat({
-    data: {
+  const { data, error } = await supabase.functions.invoke("chatbot", {
+    body: {
       threadId,
       message,
-      attachments: attachments.map((a) => ({
-        url: a.url,
-        name: a.name,
-        type: a.type,
+      attachments: attachments.map((attachment) => ({
+        url: attachment.url,
+        name: attachment.name,
+        type: attachment.type,
       })),
     },
   });
 
+  if (error) {
+    console.error("[chatApi] chatbot edge function error:", error);
+    throw new Error("تعذر معالجة الطلب حالياً، يرجى المحاولة لاحقاً.");
+  }
+
+  if (!data || typeof data.reply !== "string") {
+    throw new Error("تعذر معالجة الطلب حالياً، يرجى المحاولة لاحقاً.");
+  }
+
   return {
-    reply: res.reply || "…",
-    conversationId: res.threadId,
+    reply: data.reply || "…",
+    conversationId:
+      typeof data.threadId === "string" ? data.threadId : conversationId,
     sources: [],
     actions: [],
   };
