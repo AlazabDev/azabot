@@ -16,6 +16,7 @@ import { Route as EmbedRouteImport } from './routes/embed'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAgentsRouteImport } from './routes/admin.agents'
 import { Route as AdminChatRouteImport } from './routes/admin.chat'
+import { Route as AdminEmbedRouteImport } from './routes/admin.embed'
 import { Route as AdminIntegrationRouteImport } from './routes/admin.integration'
 import { Route as AdminKnowledgeRouteImport } from './routes/admin.knowledge'
 import { Route as AdminTrainingRouteImport } from './routes/admin.training'
@@ -55,6 +56,11 @@ const AdminChatRoute = AdminChatRouteImport.update({
   path: '/chat',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminEmbedRoute = AdminEmbedRouteImport.update({
+  id: '/embed',
+  path: '/embed',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminIntegrationRoute = AdminIntegrationRouteImport.update({
   id: '/integration',
   path: '/integration',
@@ -78,6 +84,7 @@ export interface FileRoutesByFullPath {
   '/embed': typeof EmbedRoute
   '/admin/agents': typeof AdminAgentsRoute
   '/admin/chat': typeof AdminChatRoute
+  '/admin/embed': typeof AdminEmbedRoute
   '/admin/integration': typeof AdminIntegrationRoute
   '/admin/knowledge': typeof AdminKnowledgeRoute
   '/admin/training': typeof AdminTrainingRoute
@@ -89,6 +96,7 @@ export interface FileRoutesByTo {
   '/embed': typeof EmbedRoute
   '/admin/agents': typeof AdminAgentsRoute
   '/admin/chat': typeof AdminChatRoute
+  '/admin/embed': typeof AdminEmbedRoute
   '/admin/integration': typeof AdminIntegrationRoute
   '/admin/knowledge': typeof AdminKnowledgeRoute
   '/admin/training': typeof AdminTrainingRoute
@@ -102,6 +110,7 @@ export interface FileRoutesById {
   '/embed': typeof EmbedRoute
   '/admin/agents': typeof AdminAgentsRoute
   '/admin/chat': typeof AdminChatRoute
+  '/admin/embed': typeof AdminEmbedRoute
   '/admin/integration': typeof AdminIntegrationRoute
   '/admin/knowledge': typeof AdminKnowledgeRoute
   '/admin/training': typeof AdminTrainingRoute
@@ -116,6 +125,7 @@ export interface FileRouteTypes {
     | '/embed'
     | '/admin/agents'
     | '/admin/chat'
+    | '/admin/embed'
     | '/admin/integration'
     | '/admin/knowledge'
     | '/admin/training'
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
     | '/embed'
     | '/admin/agents'
     | '/admin/chat'
+    | '/admin/embed'
     | '/admin/integration'
     | '/admin/knowledge'
     | '/admin/training'
@@ -139,6 +150,7 @@ export interface FileRouteTypes {
     | '/embed'
     | '/admin/agents'
     | '/admin/chat'
+    | '/admin/embed'
     | '/admin/integration'
     | '/admin/knowledge'
     | '/admin/training'
@@ -203,6 +215,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminChatRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/embed': {
+      id: '/admin/embed'
+      path: '/embed'
+      fullPath: '/admin/embed'
+      preLoaderRoute: typeof AdminEmbedRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/integration': {
       id: '/admin/integration'
       path: '/integration'
@@ -230,6 +249,7 @@ declare module '@tanstack/react-router' {
 interface AdminRouteChildren {
   AdminAgentsRoute: typeof AdminAgentsRoute
   AdminChatRoute: typeof AdminChatRoute
+  AdminEmbedRoute: typeof AdminEmbedRoute
   AdminIntegrationRoute: typeof AdminIntegrationRoute
   AdminKnowledgeRoute: typeof AdminKnowledgeRoute
   AdminTrainingRoute: typeof AdminTrainingRoute
@@ -239,6 +259,7 @@ interface AdminRouteChildren {
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAgentsRoute: AdminAgentsRoute,
   AdminChatRoute: AdminChatRoute,
+  AdminEmbedRoute: AdminEmbedRoute,
   AdminIntegrationRoute: AdminIntegrationRoute,
   AdminKnowledgeRoute: AdminKnowledgeRoute,
   AdminTrainingRoute: AdminTrainingRoute,
