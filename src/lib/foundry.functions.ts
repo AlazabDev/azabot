@@ -302,15 +302,12 @@ export const foundryChat = createServerFn({ method: "POST" })
       let conversationId: string | null = data.threadId
         ? verifyThreadToken(data.threadId)
         : null;
-      let itemsSent = false;
-
       if (!conversationId) {
         const conv = await foundryFetch<{ id: string }>("/conversations", {
           method: "POST",
-          body: JSON.stringify({ items: [userItem] }),
+          body: JSON.stringify({}),
         });
         conversationId = conv.id;
-        itemsSent = true;
       }
 
       // 3) Generate the agent response for this conversation.
@@ -326,26 +323,19 @@ export const foundryChat = createServerFn({ method: "POST" })
           version: agentVersion,
         },
       };
-      if (toolsOn) body.tools = maintenanceTools;
 
       // Note: Foundry rejects `instructions`/`temperature` when an agent
-      // reference is supplied — those live on the agent definition itself.
+      // reference is supplied. It also rejects request-level tools, so any
+      // maintenance-capable turn uses the model deployment directly.
 
-      const startedAt = Date.now();
-      let toolRun: ToolRunResult;
-      try {
-        toolRun = await runWithTools(body, itemsSent ? null : [userItem]);
-      } catch (err) {
-        if (!(err instanceof Error) || err.message === "E_RATE_LIMIT") throw err;
-        // The agent definition may be bound to a per-user identity scope, which
-        // an API key cannot satisfy. Fall back to the model deployment directly,
-        // applying the agent's own prompt settings.
-        const model = agent?.deployment || process.env.FOUNDRY_MODEL;
-        if (!model) throw err;
-        const fallbackBody: Record<string, unknown> = {
-          model,
-          conversation: conversationId,
-        };
+      const model = agent?.deployment || process.env.FOUNDRY_MODEL;
+      const fallbackBody: Record<string, unknown> | null = model
+        ? {
+            model,
+            conversation: conversationId,
+          }
+        : null;
+      if (fallbackBody) {
         const instructions = [
           agent?.system_prompt ?? "",
           toolsOn ? MAINTENANCE_GUIDANCE : "",
@@ -355,9 +345,29 @@ export const foundryChat = createServerFn({ method: "POST" })
         if (instructions) fallbackBody.instructions = instructions;
         if (toolsOn) fallbackBody.tools = maintenanceTools;
         // `temperature` is unsupported on reasoning-class deployments; skip it.
-        if (typeof agent?.max_tokens === "number") fallbackBody.max_output_tokens = agent.max_tokens;
+        if (typeof agent?.max_tokens === "number") {
+          fallbackBody.max_output_tokens = agent.max_tokens;
+        }
+      }
 
-        toolRun = await runWithTools(fallbackBody, itemsSent ? null : [userItem]);
+      const startedAt = Date.now();
+      let toolRun: ToolRunResult;
+      if (toolsOn) {
+        if (!fallbackBody) {
+          throw new Error("FOUNDRY_MODEL is not configured for maintenance tools");
+        }
+        toolRun = await runWithTools(fallbackBody, [userItem]);
+      } else {
+        try {
+          toolRun = await runWithTools(body, [userItem]);
+        } catch (err) {
+          if (!(err instanceof Error) || err.message === "E_RATE_LIMIT" || !fallbackBody) {
+            throw err;
+          }
+          // The agent may require a per-user identity that an API key cannot
+          // supply. Fall back to its configured model deployment.
+          toolRun = await runWithTools(fallbackBody, [userItem]);
+        }
       }
 
       const directMaintenanceReply = maintenanceReply(toolRun.executions);
