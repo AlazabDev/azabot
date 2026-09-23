@@ -39,20 +39,49 @@ async function callGateway(
   } catch {
     parsed = { raw: text.slice(0, 500) };
   }
-  if (!res.ok) {
+  const body =
+    parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {};
+  if (!res.ok || body["success"] === false || body["error"]) {
     console.error(`[Maintenance] ${res.status}: ${text.slice(0, 500)}`);
     return {
       ok: false,
       status: res.status,
-      error:
-        res.status === 403
-          ? "لا تتوفر صلاحية على هذا الطلب."
-          : res.status === 404
-            ? "لم يتم العثور على الطلب."
-            : "تعذر تنفيذ العملية على نظام الصيانة حالياً.",
+      error: gatewayErrorMessage(res.status, body),
     };
   }
-  return { ok: true, data: parsed };
+  return {
+    ok: true,
+    request_id: str(body["request_id"], 100) || undefined,
+    request_number: str(body["request_number"], 100) || undefined,
+    status: str(body["status"], 100) || undefined,
+    workflow_stage:
+      str(body["workflow_stage_v2"], 100) ||
+      str(body["workflow_stage"], 100) ||
+      undefined,
+    track_url: safeTrackingUrl(body["track_url"]),
+    message: str(body["message_ar"], 500) || str(body["message"], 500) || undefined,
+  };
+}
+
+function gatewayErrorMessage(status: number, body: Record<string, unknown>): string {
+  const providerMessage = str(body["message_ar"], 500);
+  if (providerMessage) return providerMessage;
+  if (status === 403) return "لا تتوفر صلاحية على هذا الطلب.";
+  if (status === 404) return "لم يتم العثور على الطلب. تأكد من رقم الطلب وحاول مرة أخرى.";
+  return "تعذر تنفيذ العملية على نظام الصيانة حالياً.";
+}
+
+function safeTrackingUrl(value: unknown): string | undefined {
+  const candidate = str(value, 500);
+  if (!candidate) return undefined;
+  try {
+    const url = new URL(candidate);
+    return url.protocol === "https:" ? url.toString() : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function str(v: unknown, max = 400): string {
@@ -65,7 +94,7 @@ export const maintenanceTools = [
     type: "function",
     name: "create_maintenance_request",
     description:
-      "إنشاء طلب صيانة جديد للعميل. استخدمها بعد جمع: اسم العميل، رقم الجوال، نوع الخدمة، ووصف المشكلة.",
+      "إنشاء طلب صيانة حقيقي للعميل. لا تستدعها حتى تجمع اسم العميل ورقم الجوال ونوع الخدمة ووصف المشكلة. بعد نجاحها يجب عرض request_number وtrack_url حرفياً للعميل.",
     parameters: {
       type: "object",
       properties: {
@@ -83,7 +112,7 @@ export const maintenanceTools = [
     type: "function",
     name: "get_maintenance_status",
     description:
-      "الاستفسار عن حالة طلب صيانة قائم برقم الطلب (request_number) أو معرّفه (request_id).",
+      "الاستفسار الحقيقي عن حالة طلب صيانة قائم. اطلب request_number من العميل إن لم يرسله، ثم اعرض request_number وstatus وworkflow_stage وtrack_url من النتيجة حرفياً.",
     parameters: {
       type: "object",
       properties: {
@@ -214,8 +243,9 @@ export function maintenanceToolsAvailable(): boolean {
 /** Extra guidance appended to the model instructions when tools are active. */
 export const MAINTENANCE_GUIDANCE = `
 أنت مساعد خدمة عملاء للصيانة. يمكنك تنفيذ العمليات التالية عبر الأدوات المتاحة:
-- إنشاء طلب صيانة جديد: اجمع أولاً اسم العميل، رقم الجوال، نوع الخدمة (كهرباء، سباكة، تكييف، إنشائي، دهان، نجارة، نظافة، أخرى)، ووصف المشكلة، ثم نفّذ create_maintenance_request وأبلغ العميل برقم الطلب.
-- الاستفسار عن حالة طلب: اطلب رقم الطلب ثم نفّذ get_maintenance_status واشرح الحالة بالعربية بأسلوب واضح.
+- إنشاء طلب صيانة جديد: اجمع أولاً اسم العميل، رقم الجوال، نوع الخدمة (كهرباء، سباكة، تكييف، إنشائي، دهان، نجارة، نظافة، أخرى)، ووصف المشكلة. اسأل فقط عن البيانات الناقصة، ثم نفّذ create_maintenance_request فور اكتمالها.
+- بعد نجاح الإنشاء: أكد التنفيذ واعرض request_number كرَقْم الطلب وtrack_url كرابط متابعة قابل للفتح. لا تقل إن الطلب أُنشئ ما لم تعد الأداة ok=true.
+- الاستفسار عن حالة طلب: اطلب رقم الطلب إذا كان ناقصاً، ثم نفّذ get_maintenance_status واعرض رقم الطلب والحالة والمرحلة الحالية ورابط المتابعة.
 - إضافة ملاحظة أو إلغاء طلب عند طلب العميل.
-لا تخترع أرقام طلبات أو حالات؛ اعتمد فقط على نتائج الأدوات. اردد بالعربية باختصار واحترافية.
+لا تخترع أرقام طلبات أو حالات أو روابط؛ انقلها فقط من نتيجة الأداة. إذا أعادت الأداة خطأ، اشرحه للعميل ولا تدّعي نجاح العملية. اردد بالعربية باختصار واحترافية.
 `.trim();
