@@ -106,6 +106,16 @@ interface ResponsesResult {
   }>;
 }
 
+interface MaintenanceExecution {
+  name: string;
+  result: Record<string, unknown>;
+}
+
+interface ToolRunResult {
+  response: ResponsesResult;
+  executions: MaintenanceExecution[];
+}
+
 function extractText(res: ResponsesResult): string {
   if (typeof res.output_text === "string" && res.output_text.trim()) {
     return res.output_text.trim();
@@ -131,10 +141,11 @@ function extractText(res: ResponsesResult): string {
 async function runWithTools(
   baseBody: Record<string, unknown>,
   firstInput: Array<Record<string, unknown>> | null,
-): Promise<ResponsesResult> {
+): Promise<ToolRunResult> {
   const { runMaintenanceTool } = await import("@/lib/maintenance.server");
   let input = firstInput;
   let result: ResponsesResult = {};
+  const executions: MaintenanceExecution[] = [];
 
   for (let step = 0; step < 5; step++) {
     const body = { ...baseBody };
@@ -147,7 +158,7 @@ async function runWithTools(
     const calls = (result.output ?? []).filter(
       (i) => i.type === "function_call" && i.name,
     );
-    if (!calls.length) return result;
+    if (!calls.length) return { response: result, executions };
 
     const followUp: Array<Record<string, unknown>> = [];
     for (const call of calls) {
@@ -158,6 +169,7 @@ async function runWithTools(
         args = {};
       }
       const out = await runMaintenanceTool(call.name as string, args);
+      executions.push({ name: call.name as string, result: out });
       followUp.push({
         type: "function_call_output",
         call_id: call.call_id || call.id,
@@ -166,7 +178,62 @@ async function runWithTools(
     }
     input = followUp;
   }
-  return result;
+  return { response: result, executions };
+}
+
+function resultString(result: Record<string, unknown>, key: string): string {
+  const value = result[key];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+/**
+ * Maintenance confirmations are rendered from the gateway result itself.
+ * This guarantees that request numbers, states and tracking links cannot be
+ * omitted or invented by the language model after a successful tool call.
+ */
+function maintenanceReply(executions: MaintenanceExecution[]): string | null {
+  const execution = executions.at(-1);
+  if (!execution) return null;
+  const { name, result } = execution;
+  if (result["ok"] !== true) {
+    return resultString(result, "error") || "تعذر تنفيذ طلب الصيانة حالياً.";
+  }
+
+  const requestNumber = resultString(result, "request_number");
+  const trackingUrl = resultString(result, "track_url");
+  const status = resultString(result, "status");
+  const stage = resultString(result, "workflow_stage");
+  const lines: string[] = [];
+
+  if (name === "create_maintenance_request") {
+    lines.push("تم إنشاء طلب الصيانة بنجاح ✅");
+    if (requestNumber) lines.push(`رقم الطلب: ${requestNumber}`);
+    if (trackingUrl) lines.push(`رابط المتابعة: ${trackingUrl}`);
+    if (!requestNumber) lines.push("تم تسجيل الطلب، وسيصلك رقم الطلب عبر وسيلة التواصل المسجلة.");
+    return lines.join("\n");
+  }
+
+  if (name === "get_maintenance_status") {
+    lines.push("تفاصيل طلب الصيانة:");
+    if (requestNumber) lines.push(`رقم الطلب: ${requestNumber}`);
+    if (status) lines.push(`الحالة: ${status}`);
+    if (stage && stage !== status) lines.push(`المرحلة الحالية: ${stage}`);
+    if (trackingUrl) lines.push(`رابط المتابعة: ${trackingUrl}`);
+    return lines.length > 1 ? lines.join("\n") : "تم العثور على الطلب، لكن تفاصيل حالته غير متاحة حالياً.";
+  }
+
+  if (name === "add_maintenance_note") {
+    return ["تمت إضافة الملاحظة إلى طلب الصيانة ✅", requestNumber ? `رقم الطلب: ${requestNumber}` : "", trackingUrl ? `رابط المتابعة: ${trackingUrl}` : ""]
+      .filter(Boolean)
+      .join("\n");
+  }
+
+  if (name === "cancel_maintenance_request") {
+    return ["تم إلغاء طلب الصيانة ✅", requestNumber ? `رقم الطلب: ${requestNumber}` : "", trackingUrl ? `رابط المتابعة: ${trackingUrl}` : ""]
+      .filter(Boolean)
+      .join("\n");
+  }
+  return null;
 }
 
 
@@ -265,9 +332,9 @@ export const foundryChat = createServerFn({ method: "POST" })
       // reference is supplied — those live on the agent definition itself.
 
       const startedAt = Date.now();
-      let result: ResponsesResult;
+      let toolRun: ToolRunResult;
       try {
-        result = await runWithTools(body, itemsSent ? null : [userItem]);
+        toolRun = await runWithTools(body, itemsSent ? null : [userItem]);
       } catch (err) {
         if (!(err instanceof Error) || err.message === "E_RATE_LIMIT") throw err;
         // The agent definition may be bound to a per-user identity scope, which
@@ -290,13 +357,15 @@ export const foundryChat = createServerFn({ method: "POST" })
         // `temperature` is unsupported on reasoning-class deployments; skip it.
         if (typeof agent?.max_tokens === "number") fallbackBody.max_output_tokens = agent.max_tokens;
 
-        result = await runWithTools(fallbackBody, [userItem]);
+        toolRun = await runWithTools(fallbackBody, itemsSent ? null : [userItem]);
       }
 
-
+      const directMaintenanceReply = maintenanceReply(toolRun.executions);
+      const reply = directMaintenanceReply || extractText(toolRun.response);
+      if (!reply) throw new Error("Empty response from Foundry");
       return {
         threadId: signThreadId(conversationId),
-        reply: extractText(result),
+        reply,
         agent: agent ? { id: agent.id, name: agent.name } : null,
         latencyMs: Date.now() - startedAt,
       };
