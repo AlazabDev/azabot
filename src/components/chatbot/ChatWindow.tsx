@@ -34,6 +34,7 @@ interface ChatWindowProps {
   setConversationId: (id: string) => void;
   settings: ChatSettingsState;
   setSettings: React.Dispatch<React.SetStateAction<ChatSettingsState>>;
+  callRequest: number;
   onClose: () => void;
 }
 
@@ -51,6 +52,7 @@ export function ChatWindow({
   setConversationId,
   settings,
   setSettings,
+  callRequest,
   onClose,
 }: ChatWindowProps) {
   const [phase, setPhase] = useState<ChatPhase>("idle");
@@ -72,6 +74,10 @@ export function ChatWindow({
       return () => clearTimeout(t);
     }
   }, [open]);
+
+  useEffect(() => {
+    if (open && callRequest > 0) setCallOpen(true);
+  }, [callRequest, open]);
 
   useEffect(() => {
     return () => {

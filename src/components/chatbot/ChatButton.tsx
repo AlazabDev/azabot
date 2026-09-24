@@ -1,109 +1,76 @@
-import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { ChevronDown, Maximize2, MessageCircle, Phone, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface ChatButtonProps {
   isOpen: boolean;
-  onClick: () => void;
+  isExpanded: boolean;
+  onExpand: () => void;
+  onCollapse: () => void;
+  onOpenChat: () => void;
+  onStartCall: () => void;
 }
 
-const GREETING = "مرحباً، أنا عزبوت، كيف يمكنني مساعدتك؟";
-
-export function ChatButton({ isOpen, onClick }: ChatButtonProps) {
-  const [typed, setTyped] = useState("");
-  const [showBubble, setShowBubble] = useState(true);
-
-  // Typewriter effect that loops while the widget is closed.
-  useEffect(() => {
-    if (isOpen) {
-      setShowBubble(false);
-      return;
-    }
-    setShowBubble(true);
-    let i = 0;
-    let cancelled = false;
-    let timeout: ReturnType<typeof setTimeout>;
-
-    const tick = () => {
-      if (cancelled) return;
-      if (i <= GREETING.length) {
-        setTyped(GREETING.slice(0, i));
-        i += 1;
-        timeout = setTimeout(tick, 70);
-      } else {
-        timeout = setTimeout(() => {
-          i = 0;
-          tick();
-        }, 3500);
-      }
-    };
-    tick();
-    return () => {
-      cancelled = true;
-      clearTimeout(timeout);
-    };
-  }, [isOpen]);
+export function ChatButton({
+  isOpen,
+  isExpanded,
+  onExpand,
+  onCollapse,
+  onOpenChat,
+  onStartCall,
+}: ChatButtonProps) {
+  if (isOpen) return null;
 
   return (
     <div
+      dir="rtl"
       className={cn(
-        "fixed bottom-5 right-5 z-[9999] flex flex-col items-end sm:bottom-6 sm:right-6",
-        // On mobile the window is full-screen, so the launcher would overlap it.
-        isOpen && "hidden sm:flex",
+        "fixed bottom-4 right-4 z-[9999] flex items-end justify-end transition-[width,height] duration-300 motion-reduce:transition-none sm:bottom-5 sm:right-5",
+        isExpanded ? "h-[118px] w-[min(380px,calc(100vw-2rem))]" : "h-16 w-[92px]",
       )}
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      {showBubble && !isOpen && (
-        <div
-          dir="rtl"
-          className="azab-pop-in absolute bottom-full right-0 mb-2 w-[240px] origin-bottom-right rounded-2xl bg-white px-3.5 py-2 text-[13px] font-medium text-[#030957] shadow-lg ring-1 ring-black/5 transition-transform duration-200 hover:scale-[1.03]"
-          style={{ minHeight: 36 }}
-        >
-          <span className="whitespace-pre-wrap leading-relaxed">
-            {typed}
-            <span className="ml-0.5 inline-block h-3.5 w-[2px] translate-y-0.5 animate-pulse bg-[#030957]" />
-          </span>
-          <span
-            className="absolute -bottom-1.5 right-6 h-3 w-3 rotate-45 bg-white ring-1 ring-black/5"
-            aria-hidden
-          />
+      {isExpanded ? (
+        <div className="azab-launcher-expand w-full overflow-hidden rounded-2xl border border-azab-line bg-azab-surface shadow-azab-launcher">
+          <div className="flex h-[58px] items-center gap-2 px-3">
+            <img src="/astro-bot.gif" alt="" className="h-10 w-10 shrink-0 object-contain" draggable={false} />
+            <p className="min-w-0 flex-1 text-sm font-semibold text-azab-navy">هل تحتاج إلى مساعدة؟</p>
+            <span className="h-2 w-2 shrink-0 rounded-full bg-azab-online" aria-label="متصل" />
+            <Button type="button" variant="ghost" size="icon" onClick={onCollapse} aria-label="تصغير عزبوت" className="h-8 w-8 shrink-0 text-azab-navy hover:bg-azab-soft">
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="grid h-[58px] grid-cols-[minmax(0,1.45fr)_42px_minmax(0,1fr)_42px] gap-2 border-t border-azab-line p-2">
+            <Button type="button" onClick={onStartCall} className="h-10 min-w-0 rounded-lg bg-azab-navy px-3 text-xs text-azab-on-navy shadow-none hover:bg-azab-navy-strong">
+              <Phone className="h-4 w-4" />
+              <span className="truncate">دعم مكالمة</span>
+            </Button>
+            <Button type="button" variant="outline" size="icon" onClick={onOpenChat} aria-label="بدء محادثة" className="h-10 w-10 rounded-lg border-azab-line text-azab-navy hover:bg-azab-soft">
+              <MessageCircle className="h-4 w-4" />
+            </Button>
+            <Button type="button" variant="outline" onClick={onOpenChat} className="h-10 min-w-0 justify-between rounded-lg border-azab-line px-2 text-xs text-azab-navy hover:bg-azab-soft">
+              <span className="flex min-w-0 items-center gap-1.5">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-azab-amber">
+                  <img src="/astro-bot.gif" alt="" className="h-5 w-5 object-contain" />
+                </span>
+                <span className="truncate">عزبوت</span>
+              </span>
+              <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+            </Button>
+            <Button type="button" variant="outline" size="icon" onClick={onOpenChat} aria-label="فتح نافذة المحادثة" className="h-10 w-10 rounded-lg border-azab-line text-azab-navy hover:bg-azab-soft">
+              <Maximize2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-      )}
-
-      <button
-        type="button"
-        onClick={onClick}
-        aria-label={isOpen ? "إغلاق المساعد" : "فتح المساعد"}
-        aria-expanded={isOpen}
-        className={cn(
-          "relative flex items-center justify-center focus:outline-none",
-          // Closed: keep the astro-bot image at its original size.
-          // Open: 30% smaller so the close control stays discreet.
-          isOpen
-            ? "h-11 w-11 overflow-hidden rounded-full shadow-xl ring-2 ring-[#ffb900]/70 transition active:scale-95 focus:ring-4 focus:ring-[#ffb900]/50"
-            : "h-[72px] w-[72px]",
-        )}
-      >
-        {isOpen ? (
-          <span
-            className="flex h-full w-full items-center justify-center"
-            style={{
-              background: "linear-gradient(135deg, #1a2280 0%, #030957 100%)",
-              color: "#fff",
-            }}
-          >
-            <X className="h-5 w-5" strokeWidth={2.5} />
+      ) : (
+        <Button type="button" variant="outline" onClick={onExpand} aria-label="توسيع عزبوت" aria-expanded={false} className="azab-launcher-breathe h-16 w-[92px] gap-1 rounded-2xl border-azab-line bg-azab-surface p-2 text-azab-navy shadow-azab-launcher hover:bg-azab-surface">
+          <img src="/astro-bot.gif" alt="عزبوت" className="h-11 w-11 object-contain" draggable={false} />
+          <span className="flex h-8 w-6 items-center justify-center rounded-md bg-azab-navy text-azab-on-navy">
+            <ChevronDown className="h-4 w-4 rotate-180" />
           </span>
-        ) : (
-          <img
-            src="/astro-bot.gif"
-            alt="عزبوت"
-            className="h-full w-full object-contain"
-            draggable={false}
-          />
-        )}
-
-      </button>
+        </Button>
+      )}
     </div>
   );
 }

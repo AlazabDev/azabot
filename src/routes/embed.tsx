@@ -43,11 +43,15 @@ function EmbedPage() {
     );
   };
 
+  const notifyState = (state: "collapsed" | "expanded" | "open") => {
+    window.parent?.postMessage({ source: "azabot", type: "layout", state }, "*");
+  };
+
   if (!mounted) return null;
 
   return (
     <div dir="rtl" className="h-dvh w-full bg-transparent">
-      <ChatbotWidget onOpenChange={notify} />
+      <ChatbotWidget onOpenChange={notify} onStateChange={notifyState} />
     </div>
   );
 }

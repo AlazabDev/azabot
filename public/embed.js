@@ -24,9 +24,9 @@
   var position = (script && script.getAttribute("data-position")) || "right";
   var zIndex = (script && script.getAttribute("data-z-index")) || "2147483000";
 
-  // Keep the closed iframe limited to the launcher and its greeting so it
-  // floats above the host page without changing the host layout or styles.
-  var CLOSED = { width: "280px", height: "170px" };
+  // Keep every launcher state tightly bounded so the iframe never blocks the host page.
+  var CLOSED = { width: "124px", height: "96px" };
+  var EXPANDED = { width: "420px", height: "154px" };
   var OPEN_DESKTOP = { width: "420px", height: "min(680px, 92vh)" };
 
   var iframe = document.createElement("iframe");
@@ -54,10 +54,15 @@
     return window.innerWidth < 520;
   }
 
-  function apply(open) {
-    if (!open) {
+  function apply(state) {
+    if (state === "collapsed") {
       iframe.style.width = CLOSED.width;
       iframe.style.height = CLOSED.height;
+      return;
+    }
+    if (state === "expanded") {
+      iframe.style.width = isMobile() ? "100vw" : EXPANDED.width;
+      iframe.style.height = EXPANDED.height;
       return;
     }
     if (isMobile()) {
@@ -69,19 +74,21 @@
     }
   }
 
-  var isOpen = false;
+  var widgetState = "collapsed";
   window.addEventListener("message", function (event) {
     if (event.origin !== origin) return;
     var data = event.data;
     if (!data || data.source !== "azabot") return;
-    if (data.type === "open") isOpen = true;
-    else if (data.type === "close") isOpen = false;
+    if (data.type === "layout" && (data.state === "collapsed" || data.state === "expanded" || data.state === "open")) {
+      widgetState = data.state;
+    } else if (data.type === "open") widgetState = "open";
+    else if (data.type === "close") widgetState = "collapsed";
     else if (data.type !== "ready") return;
-    apply(isOpen);
+    apply(widgetState);
   });
 
   window.addEventListener("resize", function () {
-    apply(isOpen);
+    apply(widgetState);
   });
 
   function mount() {
