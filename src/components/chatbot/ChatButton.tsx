@@ -84,7 +84,7 @@ export function ChatButton({
             </Button>
           </div>
 
-          <div className="grid h-[58px] grid-cols-[minmax(0,1.45fr)_42px_minmax(0,1fr)_42px] gap-2 border-t border-azab-line p-2">
+          <div className="grid h-[58px] grid-cols-[minmax(0,1.45fr)_42px_42px_42px] gap-2 border-t border-azab-line p-2">
             <Button
               type="button"
               onClick={onStartCall}
@@ -128,23 +128,23 @@ export function ChatButton({
         <div className="flex h-[58px] w-[88px] items-center gap-2 rounded-[18px] border border-azab-line bg-white px-2 shadow-azab-launcher">
           <Button
             type="button"
-            variant="ghost"
-            size="icon"
             onClick={onOpenChat}
-            aria-label="فتح نافذة المحادثة"
-            className="h-10 w-10 rounded-xl text-azab-navy hover:bg-azab-soft"
+            aria-label="فتح الدردشة"
+            className="h-10 w-10 rounded-xl bg-[#3f3f3f] p-0 text-white shadow-none hover:bg-[#333333]"
           >
-            <Maximize2 className="h-4 w-4" />
+            <ChevronDown className="h-5 w-5" />
           </Button>
 
           <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={onExpand}
             aria-label="توسيع عزبوت"
             aria-expanded={false}
-            className="h-10 w-10 rounded-xl bg-[#3f3f3f] p-0 text-white shadow-none hover:bg-[#333333]"
+            className="h-10 w-10 rounded-xl text-azab-navy hover:bg-azab-soft"
           >
-            <ChevronDown className="h-5 w-5" />
+            <Maximize2 className="h-4 w-4" />
           </Button>
         </div>
       )}
