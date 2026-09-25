@@ -20,6 +20,7 @@ import { Route as AdminEmbedRouteImport } from './routes/admin.embed'
 import { Route as AdminIntegrationRouteImport } from './routes/admin.integration'
 import { Route as AdminKnowledgeRouteImport } from './routes/admin.knowledge'
 import { Route as AdminTrainingRouteImport } from './routes/admin.training'
+import { Route as ApiPublicAgentsSlugRouteImport } from './routes/api/public/agents.$slug'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -76,6 +77,11 @@ const AdminTrainingRoute = AdminTrainingRouteImport.update({
   path: '/training',
   getParentRoute: () => AdminRoute,
 } as any)
+const ApiPublicAgentsSlugRoute = ApiPublicAgentsSlugRouteImport.update({
+  id: '/api/public/agents/$slug',
+  path: '/api/public/agents/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/admin/knowledge': typeof AdminKnowledgeRoute
   '/admin/training': typeof AdminTrainingRoute
   '/admin/': typeof AdminIndexRoute
+  '/api/public/agents/$slug': typeof ApiPublicAgentsSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -101,6 +108,7 @@ export interface FileRoutesByTo {
   '/admin/knowledge': typeof AdminKnowledgeRoute
   '/admin/training': typeof AdminTrainingRoute
   '/admin': typeof AdminIndexRoute
+  '/api/public/agents/$slug': typeof ApiPublicAgentsSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -115,6 +123,7 @@ export interface FileRoutesById {
   '/admin/knowledge': typeof AdminKnowledgeRoute
   '/admin/training': typeof AdminTrainingRoute
   '/admin/': typeof AdminIndexRoute
+  '/api/public/agents/$slug': typeof ApiPublicAgentsSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -130,6 +139,7 @@ export interface FileRouteTypes {
     | '/admin/knowledge'
     | '/admin/training'
     | '/admin/'
+    | '/api/public/agents/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -142,6 +152,7 @@ export interface FileRouteTypes {
     | '/admin/knowledge'
     | '/admin/training'
     | '/admin'
+    | '/api/public/agents/$slug'
   id:
     | '__root__'
     | '/'
@@ -155,6 +166,7 @@ export interface FileRouteTypes {
     | '/admin/knowledge'
     | '/admin/training'
     | '/admin/'
+    | '/api/public/agents/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -162,6 +174,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   AuthRoute: typeof AuthRoute
   EmbedRoute: typeof EmbedRoute
+  ApiPublicAgentsSlugRoute: typeof ApiPublicAgentsSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -243,6 +256,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminTrainingRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/api/public/agents/$slug': {
+      id: '/api/public/agents/$slug'
+      path: '/api/public/agents/$slug'
+      fullPath: '/api/public/agents/$slug'
+      preLoaderRoute: typeof ApiPublicAgentsSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -273,6 +293,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   AuthRoute: AuthRoute,
   EmbedRoute: EmbedRoute,
+  ApiPublicAgentsSlugRoute: ApiPublicAgentsSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
