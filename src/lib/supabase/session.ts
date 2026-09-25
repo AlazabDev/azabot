@@ -31,26 +31,14 @@ export async function readSupabaseSession(): Promise<SessionSnapshot> {
   };
 }
 
-export function persistSessionSnapshot(snapshot: SessionSnapshot): void {
-  if (typeof window === "undefined") return;
-
-  try {
-    window.localStorage.setItem(SUPABASE_SESSION_STORAGE_KEY, JSON.stringify(snapshot));
-  } catch {
-    // Ignore storage failures in privacy-restricted browsers.
-  }
+export function persistSessionSnapshot(_snapshot: SessionSnapshot): void {
+  // Do not duplicate Supabase access/refresh tokens or user PII in a custom
+  // localStorage entry. Supabase Auth owns session persistence.
 }
 
 export function loadSessionSnapshot(): SessionSnapshot | null {
-  if (typeof window === "undefined") return null;
-
-  try {
-    const raw = window.localStorage.getItem(SUPABASE_SESSION_STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as SessionSnapshot;
-  } catch {
-    return null;
-  }
+  // Always hydrate from Supabase Auth instead of trusting a custom cached session.
+  return null;
 }
 
 export function clearSessionSnapshot(): void {
