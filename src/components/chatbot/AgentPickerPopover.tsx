@@ -6,7 +6,6 @@ import {
   Boxes,
   Building2,
   Check,
-  ChevronDown,
   CreditCard,
   DollarSign,
   Package,
@@ -93,21 +92,11 @@ export function AgentPickerPopover({
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-haspopup="menu"
-        aria-label="اختيار الوكيل"
-        className="flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-xl border border-azab-line bg-white px-2 text-xs text-azab-navy transition hover:bg-azab-soft"
+        aria-label={selected ? `اختيار الوكيل: ${selected.name}` : "اختيار الوكيل"}
+        title={selected?.name ?? "اختيار الوكيل"}
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-azab-amber text-azab-navy transition hover:brightness-95"
       >
-        <span className="flex min-w-0 items-center gap-1.5">
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-azab-amber text-azab-navy">
-            <SelectedIcon className="h-3.5 w-3.5" />
-          </span>
-          <span className="truncate">{selected?.name ?? "الوكيل"}</span>
-        </span>
-        <ChevronDown
-          className={cn(
-            "h-3.5 w-3.5 shrink-0 transition-transform",
-            open && "rotate-180",
-          )}
-        />
+        <SelectedIcon className="h-4 w-4" />
       </button>
 
       {open && (
