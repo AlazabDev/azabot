@@ -1,11 +1,4 @@
-export const APP_ROLES = [
-  "admin",
-  "architect",
-  "client",
-  "consultant",
-  "contractor",
-  "viewer",
-] as const;
+export const APP_ROLES = ["super_admin", "admin", "manager", "support", "user"] as const;
 
 export type AppRole = (typeof APP_ROLES)[number];
 

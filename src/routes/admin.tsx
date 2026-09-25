@@ -1,5 +1,17 @@
 import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router";
-import { LayoutDashboard, Plug, GraduationCap, BookOpen, ArrowLeft, Bot, MessagesSquare, Code2 } from "lucide-react";
+import {
+  LayoutDashboard,
+  Plug,
+  GraduationCap,
+  BookOpen,
+  ArrowLeft,
+  Users,
+  Shield,
+  Bot,
+  ScrollText,
+  Settings,
+  BarChart3,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/admin")({
@@ -24,15 +36,17 @@ export const Route = createFileRoute("/admin")({
   component: AdminLayout,
 });
 
-
 const navItems = [
   { to: "/admin", label: "لوحة التحكم", icon: LayoutDashboard, exact: true },
-  { to: "/admin/agents", label: "الوكلاء", icon: Bot },
-  { to: "/admin/chat", label: "دردشة تشغيلية", icon: MessagesSquare },
-  { to: "/admin/integration", label: "إعدادات Azure OpenAI", icon: Plug },
-  { to: "/admin/training", label: "تدريب البوت", icon: GraduationCap },
+  { to: "/admin/users", label: "المستخدمون", icon: Users },
+  { to: "/admin/roles", label: "الأدوار", icon: Shield },
+  { to: "/admin/ai", label: "الذكاء الاصطناعي", icon: Bot },
   { to: "/admin/knowledge", label: "قاعدة المعرفة", icon: BookOpen },
-  { to: "/admin/embed", label: "كود التضمين", icon: Code2 },
+  { to: "/admin/training", label: "تدريب البوت", icon: GraduationCap },
+  { to: "/admin/logs", label: "Logs", icon: ScrollText },
+  { to: "/admin/settings", label: "الإعدادات", icon: Settings },
+  { to: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+  { to: "/admin/integration", label: "إعدادات Azure OpenAI", icon: Plug },
 ];
 
 

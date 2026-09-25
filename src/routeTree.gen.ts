@@ -18,9 +18,20 @@ import { Route as AdminAgentsRouteImport } from './routes/admin.agents'
 import { Route as AdminChatRouteImport } from './routes/admin.chat'
 import { Route as AdminEmbedRouteImport } from './routes/admin.embed'
 import { Route as AdminIntegrationRouteImport } from './routes/admin.integration'
-import { Route as AdminKnowledgeRouteImport } from './routes/admin.knowledge'
-import { Route as AdminTrainingRouteImport } from './routes/admin.training'
-import { Route as ApiPublicAgentsSlugRouteImport } from './routes/api/public/agents.$slug'
+import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as AdminRolesRouteImport } from './routes/admin.roles'
+import { Route as AdminAIRouteImport } from './routes/admin.ai'
+import { Route as AdminLogsRouteImport } from './routes/admin.logs'
+import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
+import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
+import { Route as SupportRouteImport } from './routes/support'
+import { Route as SupportIndexRouteImport } from './routes/support.index'
+import { Route as SupportFaqRouteImport } from './routes/support.faq'
+import { Route as SupportDocumentationRouteImport } from './routes/support.documentation'
+import { Route as SupportTutorialsRouteImport } from './routes/support.tutorials'
+import { Route as SupportTrainingRouteImport } from './routes/support.training'
+import { Route as SupportPromptLibraryRouteImport } from './routes/support.prompt-library'
+import { Route as SupportDiagnosticsRouteImport } from './routes/support.diagnostics'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -43,138 +54,232 @@ const EmbedRoute = EmbedRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
-  id: '/',
+  id: '/admin/',
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminAgentsRoute = AdminAgentsRouteImport.update({
-  id: '/agents',
-  path: '/agents',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminChatRoute = AdminChatRouteImport.update({
-  id: '/chat',
-  path: '/chat',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminEmbedRoute = AdminEmbedRouteImport.update({
-  id: '/embed',
-  path: '/embed',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminIntegrationRoute = AdminIntegrationRouteImport.update({
-  id: '/integration',
-  path: '/integration',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminKnowledgeRoute = AdminKnowledgeRouteImport.update({
-  id: '/knowledge',
-  path: '/knowledge',
-  getParentRoute: () => AdminRoute,
-} as any)
 const AdminTrainingRoute = AdminTrainingRouteImport.update({
-  id: '/training',
+  id: '/admin/training',
   path: '/training',
   getParentRoute: () => AdminRoute,
 } as any)
-const ApiPublicAgentsSlugRoute = ApiPublicAgentsSlugRouteImport.update({
-  id: '/api/public/agents/$slug',
-  path: '/api/public/agents/$slug',
+const AdminKnowledgeRoute = AdminKnowledgeRouteImport.update({
+  id: '/admin/knowledge',
+  path: '/knowledge',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminIntegrationRoute = AdminIntegrationRouteImport.update({
+  id: '/admin/integration',
+  path: '/integration',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/users',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminRolesRoute = AdminRolesRouteImport.update({
+  id: '/admin/roles',
+  path: '/roles',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAIRoute = AdminAIRouteImport.update({
+  id: '/admin/ai',
+  path: '/ai',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminLogsRoute = AdminLogsRouteImport.update({
+  id: '/admin/logs',
+  path: '/logs',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/admin/settings',
+  path: '/settings',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
+  id: '/admin/analytics',
+  path: '/analytics',
+  getParentRoute: () => AdminRoute,
+} as any)
+const SupportRoute = SupportRouteImport.update({
+  id: '/support',
+  path: '/support',
   getParentRoute: () => rootRouteImport,
+} as any)
+const SupportIndexRoute = SupportIndexRouteImport.update({
+  id: '/support/',
+  path: '/',
+  getParentRoute: () => SupportRoute,
+} as any)
+const SupportFaqRoute = SupportFaqRouteImport.update({
+  id: '/support/faq',
+  path: '/faq',
+  getParentRoute: () => SupportRoute,
+} as any)
+const SupportDocumentationRoute = SupportDocumentationRouteImport.update({
+  id: '/support/documentation',
+  path: '/documentation',
+  getParentRoute: () => SupportRoute,
+} as any)
+const SupportTutorialsRoute = SupportTutorialsRouteImport.update({
+  id: '/support/tutorials',
+  path: '/tutorials',
+  getParentRoute: () => SupportRoute,
+} as any)
+const SupportTrainingRoute = SupportTrainingRouteImport.update({
+  id: '/support/training',
+  path: '/training',
+  getParentRoute: () => SupportRoute,
+} as any)
+const SupportPromptLibraryRoute = SupportPromptLibraryRouteImport.update({
+  id: '/support/prompt-library',
+  path: '/prompt-library',
+  getParentRoute: () => SupportRoute,
+} as any)
+const SupportDiagnosticsRoute = SupportDiagnosticsRouteImport.update({
+  id: '/support/diagnostics',
+  path: '/diagnostics',
+  getParentRoute: () => SupportRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
-  '/auth': typeof AuthRoute
-  '/embed': typeof EmbedRoute
-  '/admin/agents': typeof AdminAgentsRoute
-  '/admin/chat': typeof AdminChatRoute
-  '/admin/embed': typeof AdminEmbedRoute
+  '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/ai': typeof AdminAIRoute
   '/admin/integration': typeof AdminIntegrationRoute
   '/admin/knowledge': typeof AdminKnowledgeRoute
+  '/admin/logs': typeof AdminLogsRoute
+  '/admin/roles': typeof AdminRolesRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/admin/training': typeof AdminTrainingRoute
+  '/admin/users': typeof AdminUsersRoute
   '/admin/': typeof AdminIndexRoute
-  '/api/public/agents/$slug': typeof ApiPublicAgentsSlugRoute
+  '/support': typeof SupportRouteWithChildren
+  '/support/diagnostics': typeof SupportDiagnosticsRoute
+  '/support/documentation': typeof SupportDocumentationRoute
+  '/support/faq': typeof SupportFaqRoute
+  '/support/prompt-library': typeof SupportPromptLibraryRoute
+  '/support/training': typeof SupportTrainingRoute
+  '/support/tutorials': typeof SupportTutorialsRoute
+  '/support/': typeof SupportIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRoute
-  '/embed': typeof EmbedRoute
-  '/admin/agents': typeof AdminAgentsRoute
-  '/admin/chat': typeof AdminChatRoute
-  '/admin/embed': typeof AdminEmbedRoute
+  '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/ai': typeof AdminAIRoute
   '/admin/integration': typeof AdminIntegrationRoute
   '/admin/knowledge': typeof AdminKnowledgeRoute
+  '/admin/logs': typeof AdminLogsRoute
+  '/admin/roles': typeof AdminRolesRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/admin/training': typeof AdminTrainingRoute
+  '/admin/users': typeof AdminUsersRoute
   '/admin': typeof AdminIndexRoute
-  '/api/public/agents/$slug': typeof ApiPublicAgentsSlugRoute
+  '/support/diagnostics': typeof SupportDiagnosticsRoute
+  '/support/documentation': typeof SupportDocumentationRoute
+  '/support/faq': typeof SupportFaqRoute
+  '/support/prompt-library': typeof SupportPromptLibraryRoute
+  '/support/training': typeof SupportTrainingRoute
+  '/support/tutorials': typeof SupportTutorialsRoute
+  '/support': typeof SupportIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
-  '/auth': typeof AuthRoute
-  '/embed': typeof EmbedRoute
-  '/admin/agents': typeof AdminAgentsRoute
-  '/admin/chat': typeof AdminChatRoute
-  '/admin/embed': typeof AdminEmbedRoute
+  '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/ai': typeof AdminAIRoute
   '/admin/integration': typeof AdminIntegrationRoute
   '/admin/knowledge': typeof AdminKnowledgeRoute
+  '/admin/logs': typeof AdminLogsRoute
+  '/admin/roles': typeof AdminRolesRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/admin/training': typeof AdminTrainingRoute
+  '/admin/users': typeof AdminUsersRoute
   '/admin/': typeof AdminIndexRoute
-  '/api/public/agents/$slug': typeof ApiPublicAgentsSlugRoute
+  '/support': typeof SupportRouteWithChildren
+  '/support/diagnostics': typeof SupportDiagnosticsRoute
+  '/support/documentation': typeof SupportDocumentationRoute
+  '/support/faq': typeof SupportFaqRoute
+  '/support/prompt-library': typeof SupportPromptLibraryRoute
+  '/support/training': typeof SupportTrainingRoute
+  '/support/tutorials': typeof SupportTutorialsRoute
+  '/support/': typeof SupportIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/admin'
-    | '/auth'
-    | '/embed'
-    | '/admin/agents'
-    | '/admin/chat'
-    | '/admin/embed'
+    | '/admin/analytics'
+    | '/admin/ai'
     | '/admin/integration'
     | '/admin/knowledge'
+    | '/admin/logs'
+    | '/admin/roles'
+    | '/admin/settings'
     | '/admin/training'
+    | '/admin/users'
     | '/admin/'
-    | '/api/public/agents/$slug'
+    | '/support'
+    | '/support/diagnostics'
+    | '/support/documentation'
+    | '/support/faq'
+    | '/support/prompt-library'
+    | '/support/training'
+    | '/support/tutorials'
+    | '/support/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/auth'
-    | '/embed'
-    | '/admin/agents'
-    | '/admin/chat'
-    | '/admin/embed'
+    | '/admin/analytics'
+    | '/admin/ai'
     | '/admin/integration'
     | '/admin/knowledge'
+    | '/admin/logs'
+    | '/admin/roles'
+    | '/admin/settings'
     | '/admin/training'
+    | '/admin/users'
     | '/admin'
-    | '/api/public/agents/$slug'
+    | '/support/diagnostics'
+    | '/support/documentation'
+    | '/support/faq'
+    | '/support/prompt-library'
+    | '/support/training'
+    | '/support/tutorials'
+    | '/support'
   id:
     | '__root__'
     | '/'
     | '/admin'
-    | '/auth'
-    | '/embed'
-    | '/admin/agents'
-    | '/admin/chat'
-    | '/admin/embed'
+    | '/admin/analytics'
+    | '/admin/ai'
     | '/admin/integration'
     | '/admin/knowledge'
+    | '/admin/logs'
+    | '/admin/roles'
+    | '/admin/settings'
     | '/admin/training'
+    | '/admin/users'
     | '/admin/'
-    | '/api/public/agents/$slug'
+    | '/support'
+    | '/support/diagnostics'
+    | '/support/documentation'
+    | '/support/faq'
+    | '/support/prompt-library'
+    | '/support/training'
+    | '/support/tutorials'
+    | '/support/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
-  AuthRoute: typeof AuthRoute
-  EmbedRoute: typeof EmbedRoute
-  ApiPublicAgentsSlugRoute: typeof ApiPublicAgentsSlugRoute
+  SupportRoute: typeof SupportRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -242,58 +347,161 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIntegrationRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/knowledge': {
-      id: '/admin/knowledge'
-      path: '/knowledge'
-      fullPath: '/admin/knowledge'
-      preLoaderRoute: typeof AdminKnowledgeRouteImport
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/training': {
-      id: '/admin/training'
-      path: '/training'
-      fullPath: '/admin/training'
-      preLoaderRoute: typeof AdminTrainingRouteImport
+    '/admin/roles': {
+      id: '/admin/roles'
+      path: '/roles'
+      fullPath: '/admin/roles'
+      preLoaderRoute: typeof AdminRolesRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/api/public/agents/$slug': {
-      id: '/api/public/agents/$slug'
-      path: '/api/public/agents/$slug'
-      fullPath: '/api/public/agents/$slug'
-      preLoaderRoute: typeof ApiPublicAgentsSlugRouteImport
+    '/admin/ai': {
+      id: '/admin/ai'
+      path: '/ai'
+      fullPath: '/admin/ai'
+      preLoaderRoute: typeof AdminAIRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/logs': {
+      id: '/admin/logs'
+      path: '/logs'
+      fullPath: '/admin/logs'
+      preLoaderRoute: typeof AdminLogsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/analytics': {
+      id: '/admin/analytics'
+      path: '/analytics'
+      fullPath: '/admin/analytics'
+      preLoaderRoute: typeof AdminAnalyticsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/support': {
+      id: '/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof SupportRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/support/': {
+      id: '/support/'
+      path: '/'
+      fullPath: '/support/'
+      preLoaderRoute: typeof SupportIndexRouteImport
+      parentRoute: typeof SupportRoute
+    }
+    '/support/faq': {
+      id: '/support/faq'
+      path: '/faq'
+      fullPath: '/support/faq'
+      preLoaderRoute: typeof SupportFaqRouteImport
+      parentRoute: typeof SupportRoute
+    }
+    '/support/documentation': {
+      id: '/support/documentation'
+      path: '/documentation'
+      fullPath: '/support/documentation'
+      preLoaderRoute: typeof SupportDocumentationRouteImport
+      parentRoute: typeof SupportRoute
+    }
+    '/support/tutorials': {
+      id: '/support/tutorials'
+      path: '/tutorials'
+      fullPath: '/support/tutorials'
+      preLoaderRoute: typeof SupportTutorialsRouteImport
+      parentRoute: typeof SupportRoute
+    }
+    '/support/training': {
+      id: '/support/training'
+      path: '/training'
+      fullPath: '/support/training'
+      preLoaderRoute: typeof SupportTrainingRouteImport
+      parentRoute: typeof SupportRoute
+    }
+    '/support/prompt-library': {
+      id: '/support/prompt-library'
+      path: '/prompt-library'
+      fullPath: '/support/prompt-library'
+      preLoaderRoute: typeof SupportPromptLibraryRouteImport
+      parentRoute: typeof SupportRoute
+    }
+    '/support/diagnostics': {
+      id: '/support/diagnostics'
+      path: '/diagnostics'
+      fullPath: '/support/diagnostics'
+      preLoaderRoute: typeof SupportDiagnosticsRouteImport
+      parentRoute: typeof SupportRoute
     }
   }
 }
 
 interface AdminRouteChildren {
-  AdminAgentsRoute: typeof AdminAgentsRoute
-  AdminChatRoute: typeof AdminChatRoute
-  AdminEmbedRoute: typeof AdminEmbedRoute
+  AdminAnalyticsRoute: typeof AdminAnalyticsRoute
+  AdminAIRoute: typeof AdminAIRoute
   AdminIntegrationRoute: typeof AdminIntegrationRoute
   AdminKnowledgeRoute: typeof AdminKnowledgeRoute
+  AdminLogsRoute: typeof AdminLogsRoute
+  AdminRolesRoute: typeof AdminRolesRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
   AdminTrainingRoute: typeof AdminTrainingRoute
+  AdminUsersRoute: typeof AdminUsersRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
-  AdminAgentsRoute: AdminAgentsRoute,
-  AdminChatRoute: AdminChatRoute,
-  AdminEmbedRoute: AdminEmbedRoute,
+  AdminAnalyticsRoute: AdminAnalyticsRoute,
+  AdminAIRoute: AdminAIRoute,
   AdminIntegrationRoute: AdminIntegrationRoute,
   AdminKnowledgeRoute: AdminKnowledgeRoute,
+  AdminLogsRoute: AdminLogsRoute,
+  AdminRolesRoute: AdminRolesRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
   AdminTrainingRoute: AdminTrainingRoute,
+  AdminUsersRoute: AdminUsersRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface SupportRouteChildren {
+  SupportDiagnosticsRoute: typeof SupportDiagnosticsRoute
+  SupportDocumentationRoute: typeof SupportDocumentationRoute
+  SupportFaqRoute: typeof SupportFaqRoute
+  SupportPromptLibraryRoute: typeof SupportPromptLibraryRoute
+  SupportTrainingRoute: typeof SupportTrainingRoute
+  SupportTutorialsRoute: typeof SupportTutorialsRoute
+  SupportIndexRoute: typeof SupportIndexRoute
+}
+
+const SupportRouteChildren: SupportRouteChildren = {
+  SupportDiagnosticsRoute: SupportDiagnosticsRoute,
+  SupportDocumentationRoute: SupportDocumentationRoute,
+  SupportFaqRoute: SupportFaqRoute,
+  SupportPromptLibraryRoute: SupportPromptLibraryRoute,
+  SupportTrainingRoute: SupportTrainingRoute,
+  SupportTutorialsRoute: SupportTutorialsRoute,
+  SupportIndexRoute: SupportIndexRoute,
+}
+
+const SupportRouteWithChildren = SupportRoute._addFileChildren(SupportRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
-  AuthRoute: AuthRoute,
-  EmbedRoute: EmbedRoute,
-  ApiPublicAgentsSlugRoute: ApiPublicAgentsSlugRoute,
+  SupportRoute: SupportRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

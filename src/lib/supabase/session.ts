@@ -1,5 +1,8 @@
 import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+
+import { supabase } from "@/lib/supabase/client";
+
+export const SUPABASE_SESSION_STORAGE_KEY = "azab.supabase.session";
 
 export interface SessionSnapshot {
   session: Session | null;
@@ -7,14 +10,42 @@ export interface SessionSnapshot {
   hydratedAt: number;
 }
 
-const KEY = "azabot.session.snapshot";
+export function createEmptySessionSnapshot(): SessionSnapshot {
+  return {
+    session: null,
+    user: null,
+    hydratedAt: Date.now(),
+  };
+}
 
-const isBrowser = () => typeof window !== "undefined";
+export async function readSupabaseSession(): Promise<SessionSnapshot> {
+  const { data, error } = await supabase.auth.getSession();
+  if (error) {
+    return createEmptySessionSnapshot();
+  }
+
+  return {
+    session: data.session ?? null,
+    user: data.session?.user ?? null,
+    hydratedAt: Date.now(),
+  };
+}
+
+export function persistSessionSnapshot(snapshot: SessionSnapshot): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(SUPABASE_SESSION_STORAGE_KEY, JSON.stringify(snapshot));
+  } catch {
+    // Ignore storage failures in privacy-restricted browsers.
+  }
+}
 
 export function loadSessionSnapshot(): SessionSnapshot | null {
-  if (!isBrowser()) return null;
+  if (typeof window === "undefined") return null;
+
   try {
-    const raw = window.localStorage.getItem(KEY);
+    const raw = window.localStorage.getItem(SUPABASE_SESSION_STORAGE_KEY);
     if (!raw) return null;
     return JSON.parse(raw) as SessionSnapshot;
   } catch {
@@ -22,29 +53,12 @@ export function loadSessionSnapshot(): SessionSnapshot | null {
   }
 }
 
-export function persistSessionSnapshot(snapshot: SessionSnapshot) {
-  if (!isBrowser()) return;
-  try {
-    window.localStorage.setItem(KEY, JSON.stringify(snapshot));
-  } catch {
-    /* ignore */
-  }
-}
+export function clearSessionSnapshot(): void {
+  if (typeof window === "undefined") return;
 
-export function clearSessionSnapshot() {
-  if (!isBrowser()) return;
   try {
-    window.localStorage.removeItem(KEY);
+    window.localStorage.removeItem(SUPABASE_SESSION_STORAGE_KEY);
   } catch {
-    /* ignore */
+    // Ignore storage failures.
   }
-}
-
-export async function readSupabaseSession(): Promise<SessionSnapshot> {
-  const { data } = await supabase.auth.getSession();
-  return {
-    session: data.session ?? null,
-    user: data.session?.user ?? null,
-    hydratedAt: Date.now(),
-  };
 }

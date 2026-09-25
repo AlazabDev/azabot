@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import type {
   ChatFile,
   ChatMessage,
@@ -29,12 +29,11 @@ import { VoiceCall } from "./VoiceCall";
 interface ChatWindowProps {
   open: boolean;
   messages: ChatMessage[];
-  setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
+  setMessages: Dispatch<SetStateAction<ChatMessage[]>>;
   conversationId: string;
   setConversationId: (id: string) => void;
   settings: ChatSettingsState;
-  setSettings: React.Dispatch<React.SetStateAction<ChatSettingsState>>;
-  callRequest: number;
+  setSettings: Dispatch<SetStateAction<ChatSettingsState>>;
   onClose: () => void;
 }
 
@@ -86,82 +85,7 @@ export function ChatWindow({
     };
   }, []);
 
-  // Network awareness — offline is an explicit phase, not a hidden boolean.
-  useEffect(() => {
-    const goOffline = () => setPhase("offline");
-    const goOnline = () => setPhase((p) => (p === "offline" ? "idle" : p));
-    if (typeof navigator !== "undefined" && navigator.onLine === false) {
-      setPhase("offline");
-    }
-    window.addEventListener("offline", goOffline);
-    window.addEventListener("online", goOnline);
-    return () => {
-      window.removeEventListener("offline", goOffline);
-      window.removeEventListener("online", goOnline);
-    };
-  }, []);
-
-  const runRequest = useCallback(
-    async (userMsgId: string, payload: PendingPayload) => {
-      setPhase("connecting");
-      try {
-        const res = await sendChatMessage({
-          message: payload.text,
-          conversationId,
-          files: payload.rawFiles,
-          metadata: {
-            language: detectLanguage(payload.text),
-            source: "web-widget",
-            voiceEnabled: settings.voiceReplies,
-          },
-        });
-        if (res.conversationId && res.conversationId !== conversationId) {
-          setConversationId(res.conversationId);
-        }
-        const assistantMsg: ChatMessage = {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: res.reply,
-          timestamp: Date.now(),
-        };
-        setMessages((prev) => [...prev, assistantMsg]);
-        pendingRef.current.delete(userMsgId);
-        setPhase("completed");
-        if (settings.voiceReplies) {
-          setSpeakingId(assistantMsg.id);
-          speak(
-            assistantMsg.content,
-            detectLanguage(assistantMsg.content),
-            settings.voiceURI,
-          );
-        }
-      } catch (err) {
-        logChatError("send", err);
-        const kind = classifyChatError(err);
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: crypto.randomUUID(),
-            role: "assistant",
-            content: CHAT_ERROR_MESSAGES[kind],
-            timestamp: Date.now(),
-            failed: true,
-            retryOf: userMsgId,
-          },
-        ]);
-        setPhase(kind === "offline" ? "offline" : "error");
-      } finally {
-        setTimeout(() => inputRef.current?.focus(), 30);
-      }
-    },
-    [conversationId, setConversationId, setMessages, settings.voiceReplies, settings.voiceURI],
-  );
-
-  const handleSend = async (
-    text: string,
-    files: ChatFile[],
-    rawFiles: File[],
-  ) => {
+  const handleSend = async (text: string, files: ChatFile[], rawFiles: File[]) => {
     const userMsg: ChatMessage = {
       id: crypto.randomUUID(),
       role: "user",
@@ -288,7 +212,6 @@ export function ChatWindow({
         onNewChat={handleNewChat}
         defaultExportFormat={settings.exportFormat}
       />
-
       <div className="relative flex flex-1 flex-col overflow-hidden bg-white">
         {settingsOpen && (
           <ChatSettings
@@ -298,7 +221,6 @@ export function ChatWindow({
             onClose={() => setSettingsOpen(false)}
           />
         )}
-
         <ChatMessages
           messages={messages}
           isThinking={busy}
@@ -308,16 +230,6 @@ export function ChatWindow({
           onRetry={handleRetry}
           onSuggestion={(t) => inputRef.current?.setText(t)}
         />
-
-        {phase === "offline" && (
-          <div
-            role="status"
-            className="border-t border-black/5 bg-[#fff8e0] px-3 py-2 text-center text-xs text-[#030957]"
-          >
-            {CHAT_ERROR_MESSAGES.offline}
-          </div>
-        )}
-
         <ChatInput
           ref={inputRef}
           disabled={busy}
@@ -326,7 +238,6 @@ export function ChatWindow({
           onSend={handleSend}
           onToggleVoice={handleToggleVoice}
         />
-
         <VoiceCall
           open={callOpen}
           conversationId={conversationId}
