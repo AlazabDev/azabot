@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const BUCKET = "chatbot-uploads";
 const PATH_RE = /^[A-Za-z0-9_.\-/() ]+$/;
@@ -9,6 +10,7 @@ const PATH_RE = /^[A-Za-z0-9_.\-/() ]+$/;
  * these files directly — every read goes through this endpoint.
  */
 export const getChatUploadSignedUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data: { path: string }) => {
     if (!data || typeof data.path !== "string" || data.path.length === 0 || data.path.length > 512) {
       throw new Error("Invalid path");
@@ -18,7 +20,12 @@ export const getChatUploadSignedUrl = createServerFn({ method: "POST" })
     }
     return { path: data.path };
   })
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const ownerPrefix = `${context.userId}/`;
+    if (!data.path.startsWith(ownerPrefix)) {
+      throw new Response("Forbidden", { status: 403 });
+    }
+
     try {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: signed, error } = await supabaseAdmin.storage

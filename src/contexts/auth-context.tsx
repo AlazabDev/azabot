@@ -10,7 +10,6 @@ import {
   type SessionSnapshot,
 } from "@/lib/supabase/session";
 import type { AppRole } from "@/lib/auth/roles";
-import { isAppRole } from "@/lib/auth/roles";
 
 interface AuthContextValue {
   session: Session | null;
@@ -25,11 +24,6 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 async function resolveRole(user: User | null): Promise<AppRole | null> {
   if (!user) return null;
-
-  const metadataRole = user.user_metadata?.role;
-  if (isAppRole(metadataRole)) {
-    return metadataRole;
-  }
 
   const roles: AppRole[] = ["super_admin", "admin", "manager", "support", "user"];
   for (const role of roles) {

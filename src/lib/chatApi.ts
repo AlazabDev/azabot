@@ -27,9 +27,10 @@ interface UploadedAttachment {
 async function uploadFile(
   file: File,
   scope: string,
+  userId: string,
 ): Promise<UploadedAttachment> {
   const safe = file.name.replace(/[^\w.\-()\s]/g, "_");
-  const path = `${scope}/${crypto.randomUUID()}-${safe}`;
+  const path = `${userId}/${scope}/${crypto.randomUUID()}-${safe}`;
   const { error } = await supabase.storage
     .from(BUCKET)
     .upload(path, file, { contentType: file.type, upsert: false });
@@ -57,10 +58,15 @@ export async function sendChatMessage({
   files,
 }: SendMessageArgs): Promise<ChatApiResponse> {
   const attachments: UploadedAttachment[] = [];
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError || !authData.user) {
+    throw new Error("يجب أن تكون الجلسة صالحة لإرسال الملفات.");
+  }
+
   const scope = crypto.randomUUID();
 
   for (const file of files) {
-    attachments.push(await uploadFile(file, scope));
+    attachments.push(await uploadFile(file, scope, authData.user.id));
   }
 
   const threadId =

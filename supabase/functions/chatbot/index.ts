@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.110.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,6 +11,9 @@ const corsHeaders = {
 const API_VERSION = Deno.env.get("FOUNDRY_API_VERSION") ?? "2024-12-01-preview";
 const MAX_MESSAGE_LENGTH = 8_000;
 const MAX_ATTACHMENTS = 10;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 30;
+const rateLimit = new Map<string, number[]>();
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -25,6 +29,79 @@ function requireEnv(name: string): string {
 
 function getFoundryBase(): string {
   return requireEnv("FOUNDRY_PROJECT_ENDPOINT").replace(/\/+$/, "");
+}
+
+function getPublishableKey(): string {
+  const named = Deno.env.get("SUPABASE_PUBLISHABLE_KEYS");
+  if (named) {
+    try {
+      const parsed = JSON.parse(named) as Record<string, string>;
+      if (typeof parsed.default === "string" && parsed.default) return parsed.default;
+    } catch {
+      // Fall through to local/legacy variables.
+    }
+  }
+
+  const key =
+    Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ??
+    Deno.env.get("SUPABASE_ANON_KEY");
+
+  if (!key) throw new Error("Supabase publishable key is not configured");
+  return key;
+}
+
+function getSupabaseClient() {
+  return createClient(
+    requireEnv("SUPABASE_URL"),
+    getPublishableKey(),
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    },
+  );
+}
+
+async function requireUser(request: Request): Promise<string | null> {
+  const auth = request.headers.get("authorization");
+  if (!auth?.startsWith("Bearer ")) return null;
+
+  const token = auth.slice(7).trim();
+  if (!token || token.split(".").length !== 3) return null;
+
+  const { data, error } = await getSupabaseClient().auth.getUser(token);
+  if (error || !data.user?.id) return null;
+  return data.user.id;
+}
+
+function allowedByRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const cutoff = now - RATE_LIMIT_WINDOW_MS;
+  const current = (rateLimit.get(userId) ?? []).filter((ts) => ts > cutoff);
+
+  if (current.length >= RATE_LIMIT_MAX) {
+    rateLimit.set(userId, current);
+    return false;
+  }
+
+  current.push(now);
+  rateLimit.set(userId, current);
+  return true;
+}
+
+function safeAttachmentUrl(value: string): string | null {
+  try {
+    const url = new URL(value);
+    const supabaseUrl = new URL(requireEnv("SUPABASE_URL"));
+
+    if (url.protocol !== "https:" || url.host !== supabaseUrl.host) return null;
+    if (!url.pathname.startsWith("/storage/v1/object/sign/chatbot-uploads/")) return null;
+
+    return url.toString();
+  } catch {
+    return null;
+  }
 }
 
 function foundryHeaders(): HeadersInit {
@@ -101,6 +178,7 @@ function normalizeAttachments(value: unknown) {
       const candidate = item as Record<string, unknown>;
       return (
         typeof candidate.url === "string" &&
+        safeAttachmentUrl(candidate.url) !== null &&
         typeof candidate.name === "string" &&
         typeof candidate.type === "string"
       );
@@ -109,7 +187,7 @@ function normalizeAttachments(value: unknown) {
     .map((item) => {
       const candidate = item as Record<string, string>;
       return {
-        url: candidate.url.slice(0, 2_000),
+        url: safeAttachmentUrl(candidate.url) as string,
         name: candidate.name.slice(0, 255),
         type: candidate.type.slice(0, 128),
       };
@@ -233,6 +311,27 @@ async function handle(request: Request): Promise<Response> {
 
   if (request.method !== "POST") {
     return json({ error: "Method not allowed" }, 405);
+  }
+
+  const userId = await requireUser(request);
+  if (!userId) {
+    return json({ error: "Unauthorized" }, 401);
+  }
+
+  if (!allowedByRateLimit(userId)) {
+    return new Response(JSON.stringify({ error: "Too many requests" }), {
+      status: 429,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json; charset=utf-8",
+        "Retry-After": "60",
+      },
+    });
+  }
+
+  const contentLength = Number(request.headers.get("content-length") ?? "0");
+  if (Number.isFinite(contentLength) && contentLength > 128 * 1024) {
+    return json({ error: "Request too large" }, 413);
   }
 
   let body: unknown;
