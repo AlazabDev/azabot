@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { PhoneOff, Mic, MicOff, Loader2 } from "lucide-react";
 import { sendChatMessage } from "@/lib/chatApi";
+import { startLiveCall, type LiveCallHandle } from "@/lib/liveCall";
+import { logChatError, toUserErrorMessage } from "@/lib/chatErrors";
 import {
   detectLanguage,
   getSpeechRecognition,
@@ -11,7 +13,7 @@ import {
 } from "@/lib/voice";
 import type { ChatMessage } from "@/types/chat";
 
-type CallState = "idle" | "listening" | "thinking" | "speaking";
+type CallState = "idle" | "connecting" | "listening" | "thinking" | "speaking";
 
 interface VoiceCallProps {
   open: boolean;
@@ -33,8 +35,10 @@ export function VoiceCall({
   const [muted, setMuted] = useState(false);
   const [caption, setCaption] = useState("");
   const [duration, setDuration] = useState(0);
+  const [live, setLive] = useState(false);
 
   const recRef = useRef<ReturnType<typeof getSpeechRecognition>>(null);
+  const liveRef = useRef<LiveCallHandle | null>(null);
   const stateRef = useRef<CallState>("idle");
   const mutedRef = useRef(false);
   const convRef = useRef(conversationId);
@@ -52,29 +56,86 @@ export function VoiceCall({
 
   useEffect(() => {
     if (!open) return;
-    if (!isSpeechRecognitionSupported() || !isSpeechSynthesisSupported()) {
-      setError("المتصفح لا يدعم الاتصال الصوتي المباشر. جرّب Chrome على سطح المكتب أو Android.");
-      return;
-    }
     activeRef.current = true;
+    setError(null);
+    setState("connecting");
     const startedAt = Date.now();
-    const timer = setInterval(() => setDuration(Math.floor((Date.now() - startedAt) / 1000)), 1000);
+    const timer = setInterval(
+      () => setDuration(Math.floor((Date.now() - startedAt) / 1000)),
+      1000,
+    );
 
-    startListening();
+    // Prefer a true live (full-duplex) realtime call; fall back to the
+    // speech-recognition turn loop when realtime isn't available.
+    (async () => {
+      try {
+        const handle = await startLiveCall({
+          onConnected: () => {
+            if (!activeRef.current) return;
+            setLive(true);
+            setState("listening");
+          },
+          onSpeakingChange: (speaking) => {
+            if (!activeRef.current) return;
+            setState(speaking ? "speaking" : "listening");
+          },
+          onCaption: (t) => setCaption(t),
+          onUserText: (t) =>
+            onTranscript({
+              id: crypto.randomUUID(),
+              role: "user",
+              content: t,
+              timestamp: Date.now(),
+            }),
+          onAssistantText: (t) =>
+            onTranscript({
+              id: crypto.randomUUID(),
+              role: "assistant",
+              content: t,
+              timestamp: Date.now(),
+            }),
+          onClosed: () => {
+            if (activeRef.current) setError("انتهت المكالمة المباشرة.");
+          },
+        });
+        if (!activeRef.current) {
+          handle.stop();
+          return;
+        }
+        liveRef.current = handle;
+      } catch (err) {
+        logChatError("live-call", err);
+        if (!activeRef.current) return;
+        if (!isSpeechRecognitionSupported() || !isSpeechSynthesisSupported()) {
+          setError(
+            "المتصفح لا يدعم الاتصال الصوتي المباشر. جرّب Chrome على سطح المكتب أو Android.",
+          );
+          setState("idle");
+          return;
+        }
+        setLive(false);
+        startListening();
+      }
+    })();
 
     return () => {
       activeRef.current = false;
       clearInterval(timer);
       stopSpeaking();
+      liveRef.current?.stop();
+      liveRef.current = null;
       try {
         recRef.current?.stop();
       } catch {
         /* noop */
       }
       recRef.current = null;
+      setLive(false);
+      setState("idle");
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
 
   const startListening = () => {
     if (!activeRef.current || mutedRef.current) return;
@@ -160,7 +221,8 @@ export function VoiceCall({
         if (activeRef.current && !mutedRef.current) startListening();
       });
     } catch (err) {
-      setError((err as Error).message);
+      logChatError("voice-call", err);
+      setError(toUserErrorMessage(err));
       setState("idle");
     }
   };
@@ -181,6 +243,11 @@ export function VoiceCall({
   const toggleMute = () => {
     const next = !muted;
     setMuted(next);
+    if (liveRef.current) {
+      liveRef.current.setMuted(next);
+      setState(next ? "idle" : "listening");
+      return;
+    }
     if (next) {
       try {
         recRef.current?.stop();
@@ -196,6 +263,8 @@ export function VoiceCall({
 
   const handleHangup = () => {
     activeRef.current = false;
+    liveRef.current?.stop();
+    liveRef.current = null;
     try {
       recRef.current?.stop();
     } catch {
@@ -215,18 +284,22 @@ export function VoiceCall({
       dir="rtl"
       role="dialog"
       aria-label="مكالمة صوتية مع Azab Assistant"
-      className="absolute inset-0 z-20 flex flex-col items-center justify-between p-6 text-white"
+      className="absolute inset-0 z-20 flex flex-col items-center justify-between overflow-x-hidden p-6 text-white"
       style={{
         background:
           "linear-gradient(160deg, #030957 0%, #0a1170 55%, #1a2280 100%)",
+        paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
       }}
     >
       <div className="w-full text-center">
-        <div className="text-xs opacity-70">مكالمة صوتية مباشرة</div>
+        <div className="text-xs opacity-70">
+          {live ? "مكالمة صوتية مباشرة (Live)" : "مكالمة صوتية"}
+        </div>
         <div className="mt-1 font-mono text-lg tabular-nums">
           {mm}:{ss}
         </div>
       </div>
+
 
       <div className="flex flex-col items-center gap-6">
         <div className="relative flex h-32 w-32 items-center justify-center rounded-full bg-white/10 backdrop-blur">
@@ -243,13 +316,13 @@ export function VoiceCall({
             className="relative flex h-24 w-24 items-center justify-center rounded-full shadow-xl"
             style={{
               background:
-                state === "thinking"
+                state === "thinking" || state === "connecting"
                   ? "linear-gradient(135deg, #fff, #e5e7eb)"
                   : "linear-gradient(135deg, #ffb900, #ffd166)",
               color: "#030957",
             }}
           >
-            {state === "thinking" ? (
+            {state === "thinking" || state === "connecting" ? (
               <Loader2 className="h-8 w-8 animate-spin" />
             ) : muted ? (
               <MicOff className="h-8 w-8" />
@@ -262,16 +335,19 @@ export function VoiceCall({
         <div className="text-center text-sm opacity-90">
           {error
             ? error
-            : state === "listening"
-            ? "أستمع إليك..."
-            : state === "thinking"
-            ? "أفكر في الرد..."
-            : state === "speaking"
-            ? "يتحدث..."
-            : muted
-            ? "الميكروفون مكتوم"
-            : "على وشك الاستماع..."}
+            : state === "connecting"
+              ? "جاري الاتصال..."
+              : state === "listening"
+                ? "أستمع إليك..."
+                : state === "thinking"
+                  ? "أفكر في الرد..."
+                  : state === "speaking"
+                    ? "يتحدث..."
+                    : muted
+                      ? "الميكروفون مكتوم"
+                      : "على وشك الاستماع..."}
         </div>
+
 
         {caption && (
           <div className="max-w-xs rounded-xl bg-white/10 px-3 py-2 text-center text-xs leading-relaxed backdrop-blur">

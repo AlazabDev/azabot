@@ -33,13 +33,38 @@ export function isSpeechSynthesisSupported(): boolean {
   return typeof window !== "undefined" && "speechSynthesis" in window;
 }
 
-export function speak(text: string, lang: "ar" | "en" = "ar"): void {
+export function listVoices(): SpeechSynthesisVoice[] {
+  if (!isSpeechSynthesisSupported()) return [];
+  return window.speechSynthesis.getVoices();
+}
+
+/** Subscribe to voice list changes (voices load asynchronously). */
+export function onVoicesChanged(cb: () => void): () => void {
+  if (!isSpeechSynthesisSupported()) return () => {};
+  window.speechSynthesis.addEventListener("voiceschanged", cb);
+  return () =>
+    window.speechSynthesis.removeEventListener("voiceschanged", cb);
+}
+
+export function speak(
+  text: string,
+  lang: "ar" | "en" = "ar",
+  voiceURI?: string,
+): void {
   if (!isSpeechSynthesisSupported()) return;
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = lang === "ar" ? "ar-SA" : "en-US";
+  if (voiceURI) {
+    const match = listVoices().find((v) => v.voiceURI === voiceURI);
+    if (match) {
+      utterance.voice = match;
+      utterance.lang = match.lang;
+    }
+  }
   window.speechSynthesis.cancel();
   window.speechSynthesis.speak(utterance);
 }
+
 
 export function stopSpeaking(): void {
   if (!isSpeechSynthesisSupported()) return;

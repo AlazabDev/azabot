@@ -19,14 +19,18 @@ export const Route = createFileRoute("/admin")({
   beforeLoad: async () => {
     const { data: userData, error: userErr } = await supabase.auth.getUser();
     if (userErr || !userData.user) {
-      throw redirect({ to: "/" });
+      throw redirect({ to: "/auth", search: { reason: "signin" } });
     }
     const { data: isAdmin, error: roleErr } = await supabase.rpc("has_role", {
       _user_id: userData.user.id,
       _role: "admin",
     });
-    if (roleErr || !isAdmin) {
-      throw redirect({ to: "/" });
+    if (roleErr) {
+      if (import.meta.env.DEV) console.error("[admin] has_role failed", roleErr);
+      throw redirect({ to: "/auth", search: { reason: "error" } });
+    }
+    if (!isAdmin) {
+      throw redirect({ to: "/auth", search: { reason: "forbidden" } });
     }
   },
   component: AdminLayout,
@@ -44,6 +48,7 @@ const navItems = [
   { to: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/admin/integration", label: "إعدادات Azure OpenAI", icon: Plug },
 ];
+
 
 function AdminLayout() {
   return (
