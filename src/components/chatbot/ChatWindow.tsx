@@ -34,6 +34,8 @@ interface ChatWindowProps {
   setConversationId: (id: string) => void;
   settings: ChatSettingsState;
   setSettings: Dispatch<SetStateAction<ChatSettingsState>>;
+  callRequest: number;
+  selectedAgentId?: string;
   onClose: () => void;
 }
 
@@ -52,6 +54,7 @@ export function ChatWindow({
   settings,
   setSettings,
   callRequest,
+  selectedAgentId,
   onClose,
 }: ChatWindowProps) {
   const [phase, setPhase] = useState<ChatPhase>("idle");
@@ -66,6 +69,67 @@ export function ChatWindow({
 
   const busy = phase === "connecting" || phase === "streaming";
   const isListening = phase === "listening";
+
+  const runRequest = async (
+    userMsgId: string,
+    payload: PendingPayload,
+  ) => {
+    setPhase("connecting");
+
+    try {
+      const response = await sendChatMessage({
+        message: payload.text,
+        conversationId,
+        files: payload.rawFiles,
+        metadata: {
+          language: detectLanguage(payload.text),
+          source: "web-widget",
+          voiceEnabled: settings.voiceReplies,
+        },
+        agentId: selectedAgentId,
+      });
+
+      setPhase("streaming");
+
+      const assistantMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: response.reply,
+        timestamp: Date.now(),
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
+      if (response.conversationId) {
+        setConversationId(response.conversationId);
+      }
+
+      if (settings.voiceReplies && response.reply) {
+        speak(response.reply, detectLanguage(response.reply), settings.voiceURI);
+        setSpeakingId(assistantMessage.id);
+      }
+
+      pendingRef.current.delete(userMsgId);
+      setPhase("completed");
+      setTimeout(() => setPhase("idle"), 250);
+    } catch (error) {
+      const kind = classifyChatError(error);
+      logChatError("send", error);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: CHAT_ERROR_MESSAGES[kind],
+          timestamp: Date.now(),
+          failed: true,
+          retryOf: userMsgId,
+        },
+      ]);
+
+      setPhase(kind === "offline" ? "offline" : "error");
+    }
+  };
 
   useEffect(() => {
     if (open) {
