@@ -10,7 +10,6 @@ import {
   type SessionSnapshot,
 } from "@/lib/supabase/session";
 import type { AppRole } from "@/lib/auth/roles";
-import { isAppRole } from "@/lib/auth/roles";
 
 interface AuthContextValue {
   session: Session | null;
