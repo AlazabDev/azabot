@@ -16,6 +16,8 @@ import {
   type AgentItem,
 } from "./AgentPickerPopover";
 
+import { Orb } from "./orb";
+
 interface ChatButtonProps {
   isOpen: boolean;
   isExpanded: boolean;
@@ -137,12 +139,15 @@ export function ChatButton({
           aria-expanded={false}
           className="azab-launcher-breathe h-16 w-[92px] gap-1 rounded-2xl border-azab-line bg-azab-surface p-2 text-azab-navy shadow-azab-launcher hover:bg-azab-surface"
         >
-          <img
-            src="/astro-bot.gif"
-            alt="عزبوت"
-            className="h-11 w-11 object-contain"
-            draggable={false}
-          />
+          <div className="relative flex h-11 w-11 shrink-0 items-center justify-center">
+            <Orb
+              colors={["#030957", "#ffb900"]}
+              agentState={null}
+              className="h-10 w-10"
+            />
+
+            <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background bg-azab-online" />
+          </div>
 
           <span className="flex h-8 w-6 items-center justify-center rounded-md bg-azab-navy text-azab-on-navy">
             <ChevronDown className="h-4 w-4 rotate-180" />
