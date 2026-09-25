@@ -41,6 +41,22 @@ function authHeaders(): Record<string, string> {
   };
 }
 
+function safeAttachmentUrl(value: string): string | null {
+  try {
+    const url = new URL(value);
+    const supabaseUrl = process.env.SUPABASE_URL;
+    if (!supabaseUrl) return null;
+    const allowed = new URL(supabaseUrl);
+
+    if (url.protocol !== "https:" || url.host !== allowed.host) return null;
+    if (!url.pathname.startsWith("/storage/v1/object/sign/chatbot-uploads/")) return null;
+
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
 function getSigningSecret(): string {
   const secret =
     process.env.THREAD_SIGNING_SECRET ||
@@ -245,21 +261,42 @@ export const foundryChat = createServerFn({ method: "POST" })
     if (!data || typeof data.message !== "string") {
       throw new Error("Invalid input");
     }
+    const message = data.message.trim();
+    const agentId =
+      typeof data.agentId === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(data.agentId)
+        ? data.agentId
+        : null;
+
+    const attachments = Array.isArray(data.attachments)
+      ? data.attachments
+          .filter(
+            (a) =>
+              a &&
+              typeof a.url === "string" &&
+              safeAttachmentUrl(a.url) !== null &&
+              typeof a.name === "string" &&
+              typeof a.type === "string",
+          )
+          .slice(0, 10)
+          .map((a) => ({
+            url: safeAttachmentUrl(a.url) as string,
+            name: a.name.slice(0, 255),
+            type: a.type.slice(0, 128),
+          }))
+      : [];
+
+    if (!message && attachments.length === 0) {
+      throw new Error("Invalid input");
+    }
+
     return {
-      threadId: typeof data.threadId === "string" ? data.threadId : null,
-      agentId: typeof data.agentId === "string" && data.agentId ? data.agentId : null,
-      message: data.message.slice(0, 8000),
-      attachments: Array.isArray(data.attachments)
-        ? data.attachments
-            .filter(
-              (a) =>
-                a &&
-                typeof a.url === "string" &&
-                typeof a.name === "string" &&
-                typeof a.type === "string",
-            )
-            .slice(0, 10)
-        : [],
+      threadId:
+        typeof data.threadId === "string" && data.threadId.length <= 512
+          ? data.threadId
+          : null,
+      agentId,
+      message: message.slice(0, 8000),
+      attachments,
     } satisfies FoundryChatInput;
   })
   .handler(async ({ data }) => {
