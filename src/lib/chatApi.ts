@@ -5,6 +5,7 @@ import type {
 } from "@/types/chat";
 import { supabase } from "@/integrations/supabase/client";
 import { getChatUploadSignedUrl } from "@/lib/chatUploads.functions";
+import { dispatchMessageToAgent } from "@/lib/agents/dispatcher.functions";
 
 const BUCKET = "chatbot-uploads";
 
@@ -14,6 +15,7 @@ export interface SendMessageArgs {
   files: File[];
   metadata: ChatApiRequestMeta;
   signal?: AbortSignal;
+  agentId?: string;
 }
 
 interface UploadedAttachment {
@@ -56,6 +58,7 @@ export async function sendChatMessage({
   message,
   conversationId,
   files,
+  agentId,
 }: SendMessageArgs): Promise<ChatApiResponse> {
   const attachments: UploadedAttachment[] = [];
   const { data: authData, error: authError } = await supabase.auth.getUser();
@@ -71,6 +74,31 @@ export async function sendChatMessage({
 
   const threadId =
     conversationId && conversationId.includes(".") ? conversationId : null;
+
+  if (agentId) {
+    const attachmentLines = attachments.map(
+      (attachment) => `- ${attachment.name}: ${attachment.url}`,
+    );
+    const routedMessage = attachmentLines.length
+      ? `${message}\n\nالمرفقات:\n${attachmentLines.join("\n")}`
+      : message;
+
+    const routed = await dispatchMessageToAgent({
+      data: {
+        message: routedMessage,
+        currentAgentId: agentId,
+        forceAgentId: agentId,
+        history: [],
+      },
+    });
+
+    return {
+      reply: routed.reply,
+      conversationId,
+      sources: [],
+      actions: [],
+    };
+  }
 
   const { data, error } = await supabase.functions.invoke("chatbot", {
     body: {
