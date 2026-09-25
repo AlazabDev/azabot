@@ -31,10 +31,29 @@ function getFoundryBase(): string {
   return requireEnv("FOUNDRY_PROJECT_ENDPOINT").replace(/\/+$/, "");
 }
 
+function getPublishableKey(): string {
+  const named = Deno.env.get("SUPABASE_PUBLISHABLE_KEYS");
+  if (named) {
+    try {
+      const parsed = JSON.parse(named) as Record<string, string>;
+      if (typeof parsed.default === "string" && parsed.default) return parsed.default;
+    } catch {
+      // Fall through to local/legacy variables.
+    }
+  }
+
+  const key =
+    Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ??
+    Deno.env.get("SUPABASE_ANON_KEY");
+
+  if (!key) throw new Error("Supabase publishable key is not configured");
+  return key;
+}
+
 function getSupabaseClient() {
   return createClient(
     requireEnv("SUPABASE_URL"),
-    requireEnv("SUPABASE_PUBLISHABLE_KEY"),
+    getPublishableKey(),
     {
       auth: {
         persistSession: false,
