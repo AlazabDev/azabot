@@ -6,6 +6,7 @@ import { ChatWindow } from "./ChatWindow";
 const LS_MESSAGES = "azab.chat.messages";
 const LS_SETTINGS = "azab.chat.settings";
 const LS_CONV_ID = "azab.chat.conversationId";
+const LS_AGENT_ID = "azab.chat.agentId";
 
 const DEFAULT_SETTINGS: ChatSettingsState = {
   voiceReplies: false,
@@ -53,6 +54,7 @@ export function ChatbotWidget({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [settings, setSettings] = useState<ChatSettingsState>(DEFAULT_SETTINGS);
   const [conversationId, setConversationId] = useState<string>("");
+  const [selectedAgentId, setSelectedAgentId] = useState("az-agent-azabot");
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -64,6 +66,9 @@ export function ChatbotWidget({
       window.localStorage.setItem(LS_CONV_ID, id);
     }
     setConversationId(id);
+    setSelectedAgentId(
+      window.localStorage.getItem(LS_AGENT_ID) || "az-agent-azabot",
+    );
     setHydrated(true);
   }, []);
 
@@ -88,6 +93,11 @@ export function ChatbotWidget({
 
   useEffect(() => {
     if (!hydrated) return;
+    window.localStorage.setItem(LS_AGENT_ID, selectedAgentId);
+  }, [selectedAgentId, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
     document.documentElement.classList.toggle("dark", settings.theme === "dark");
   }, [settings.theme, hydrated]);
 
@@ -104,11 +114,14 @@ export function ChatbotWidget({
         settings={settings}
         setSettings={setSettings}
         callRequest={callRequest}
+        selectedAgentId={selectedAgentId}
         onClose={() => setOpenState(false)}
       />
       <ChatButton
         isOpen={open}
         isExpanded={launcherExpanded}
+        selectedAgentId={selectedAgentId}
+        onSelectAgent={(agent) => setSelectedAgentId(agent.id)}
         onExpand={() => setLauncherState(true)}
         onCollapse={() => setLauncherState(false)}
         onOpenChat={() => setOpenState(true)}
