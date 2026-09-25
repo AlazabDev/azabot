@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createHmac, timingSafeEqual } from "crypto";
 
 /** Azure AI Foundry v1 (conversations + responses) surface. */
@@ -239,6 +240,7 @@ function maintenanceReply(executions: MaintenanceExecution[]): string | null {
 
 
 export const foundryChat = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data: FoundryChatInput) => {
     if (!data || typeof data.message !== "string") {
       throw new Error("Invalid input");
@@ -399,6 +401,7 @@ export const foundryChat = createServerFn({ method: "POST" })
  * Instructions/voice are server-defined; the client cannot override them.
  */
 export const foundryRealtimeSession = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((_: unknown) => ({}))
   .handler(async () => {
     try {
