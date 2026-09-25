@@ -1,101 +1,50 @@
-// src/lib/agents/dispatcher.functions.ts
-// دوال الحافة الموجهة للعميل (TanStack Start createServerFn)
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import {
-  getAvailableAgents,
-  classifyIntent,
-  executeAgentChat,
-  type DispatchResult,
-} from "./dispatcher.server";
+import { AGENTS, classifyIntent, findAgent } from "./registry";
 
-// دالة جلب قائمة الوكلاء المتاحين للاستخدام في شريط الاختيار بالواجهة
-export const listPublicAgents = createServerFn({ method: "GET" }).handler(async () => {
-  try {
-    const agents = await getAvailableAgents();
-    return agents.map((a) => ({
-      id: a.id,
-      name: a.name,
-      roleSlug: a.role_slug,
-      description: a.description,
-      isDefault: a.is_default,
-    }));
-  } catch (err: any) {
-    console.error("Failed to list agents:", err);
-    return [
-      {
-        id: "default-general",
-        name: "عزبوت المساعد الذكي",
-        roleSlug: "general",
-        description: "المساعد الافتراضي",
-        isDefault: true,
-      },
-    ];
-  }
+export const listPublicAgents = createServerFn({ method: "GET" }).handler(async () =>
+  AGENTS.map((a) => ({
+    id: a.id,
+    slug: a.slug,
+    name: a.name,
+    description: a.description,
+    isDefault: Boolean(a.isDefault),
+  })),
+);
+
+const inputSchema = z.object({
+  message: z.string().trim().min(1).max(2000),
+  currentAgentId: z.string().max(60).optional(),
+  forceAgentId: z.string().max(60).optional(),
+  history: z
+    .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().max(4000) }))
+    .max(20)
+    .optional()
+    .default([]),
 });
 
-// دالة إرسال الرسالة مع التوجيه الذكي وتبديل الوكلاء
 export const dispatchMessageToAgent = createServerFn({ method: "POST" })
-  .inputValidator((data) =>
-    z
-      .object({
-        message: z.string().min(1).max(2000),
-        conversationId: z.string().optional(),
-        currentAgentId: z.string().optional(),
-        forceAgentId: z.string().optional(),
-        history: z
-          .array(
-            z.object({
-              role: z.enum(["user", "assistant"]),
-              content: z.string(),
-            })
-          )
-          .optional()
-          .default([]),
-      })
-      .parse(data)
-  )
-  .handler(async ({ data }): Promise<DispatchResult> => {
-    const agents = await getAvailableAgents();
+  .inputValidator((data) => inputSchema.parse(data))
+  .handler(async ({ data }) => {
+    const forced = findAgent(data.forceAgentId);
+    const route = forced
+      ? {
+          agent: forced,
+          switched: forced.id !== data.currentAgentId,
+          reason: `تم التحويل إلى ${forced.name} بناءً على اختيارك.`,
+        }
+      : classifyIntent(data.message, data.currentAgentId);
 
-    // 1. تحديد الوكيل (إما إجباري من المستخدم أو عبر التصنيف الذكي)
-    let targetAgent = agents[0];
-    let switched = false;
-    let switchReason: string | undefined;
+    const { runAgent } = await import("./az-model-core/engine.server");
+    const result = await runAgent(route.agent, data.message, data.history);
 
-    if (data.forceAgentId) {
-      const found = agents.find((a) => a.id === data.forceAgentId);
-      if (found) {
-        targetAgent = found;
-        switched = data.currentAgentId !== data.forceAgentId;
-        switchReason = "تم التحويل بطلب مباشر من المستخدم.";
-      }
-    } else {
-      const classified = classifyIntent(data.message, agents, data.currentAgentId);
-      targetAgent = classified.selectedAgent;
-      switched = classified.switched;
-      switchReason = classified.reason;
-    }
-
-    // 2. تنفيذ المحادثة مع الوكيل المختار
-    const chatResult = await executeAgentChat(
-      targetAgent,
-      data.message,
-      data.conversationId,
-      data.history
-    );
-
-    // 3. تجهيز الرد للواجهة
     return {
-      reply: chatResult.text,
-      conversationId: chatResult.conversationId,
-      activeAgent: {
-        id: targetAgent.id,
-        name: targetAgent.name,
-        roleSlug: targetAgent.role_slug,
-      },
-      agentSwitched: switched,
-      switchReason,
-      toolExecuted: chatResult.toolResult,
+      reply: result.reply,
+      activeAgent: { id: route.agent.id, slug: route.agent.slug, name: route.agent.name },
+      agentSwitched: route.switched,
+      switchReason: route.switched ? ("reason" in route ? route.reason : undefined) : undefined,
+      toolExecuted: result.toolExecuted
+        ? { name: result.toolExecuted.name, success: result.toolExecuted.success }
+        : undefined,
     };
   });
