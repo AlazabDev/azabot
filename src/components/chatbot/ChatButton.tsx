@@ -16,7 +16,6 @@ import {
   type AgentItem,
 } from "./AgentPickerPopover";
 
-import { Orb } from "./orb";
 
 interface ChatButtonProps {
   isOpen: boolean;
@@ -49,21 +48,19 @@ export function ChatButton({
       className={cn(
         "fixed bottom-4 right-4 z-[9999] flex items-end justify-end transition-[width,height] duration-300 motion-reduce:transition-none sm:bottom-5 sm:right-5",
         isExpanded
-          ? "h-[118px] w-[min(380px,calc(100vw-2rem))]"
-          : "h-16 w-[92px]",
+          ? "h-[118px] w-[min(420px,calc(100vw-2rem))]"
+          : "h-[58px] w-[88px]",
       )}
       style={{
         paddingBottom: "env(safe-area-inset-bottom)",
       }}
     >
       {isExpanded ? (
-        <div className="azab-launcher-expand w-full overflow-hidden rounded-2xl border border-azab-line bg-azab-surface shadow-azab-launcher">
+        <div className="azab-launcher-expand w-full overflow-visible rounded-[22px] border border-azab-line bg-azab-surface shadow-azab-launcher">
           <div className="flex h-[58px] items-center gap-2 px-3">
-            <img
-              src="/astro-bot.gif"
-              alt=""
-              className="h-10 w-10 shrink-0 object-contain"
-              draggable={false}
+            <span
+              aria-hidden="true"
+              className="h-10 w-10 shrink-0 rounded-full bg-[conic-gradient(from_210deg,#030957,#4f7cff,#49d7ff,#8b5cf6,#ffb900,#030957)] shadow-inner"
             />
 
             <p className="min-w-0 flex-1 text-sm font-semibold text-azab-navy">
@@ -112,10 +109,7 @@ export function ChatButton({
 
             <AgentPickerPopover
               selectedAgentId={selectedAgentId}
-              onSelectAgent={(agent) => {
-                onSelectAgent?.(agent);
-                onOpenChat();
-              }}
+              onSelectAgent={onSelectAgent}
             />
 
             <Button
@@ -131,28 +125,28 @@ export function ChatButton({
           </div>
         </div>
       ) : (
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onExpand}
-          aria-label="توسيع عزبوت"
-          aria-expanded={false}
-          className="azab-launcher-breathe h-16 w-[92px] gap-1 rounded-2xl border-azab-line bg-azab-surface p-2 text-azab-navy shadow-azab-launcher hover:bg-azab-surface"
-        >
-          <div className="relative flex h-11 w-11 shrink-0 items-center justify-center">
-            <Orb
-              colors={["#030957", "#ffb900"]}
-              agentState={null}
-              className="h-10 w-10"
-            />
+        <div className="flex h-[58px] w-[88px] items-center gap-2 rounded-[18px] border border-azab-line bg-white px-2 shadow-azab-launcher">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={onOpenChat}
+            aria-label="فتح نافذة المحادثة"
+            className="h-10 w-10 rounded-xl text-azab-navy hover:bg-azab-soft"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </Button>
 
-            <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background bg-azab-online" />
-          </div>
-
-          <span className="flex h-8 w-6 items-center justify-center rounded-md bg-azab-navy text-azab-on-navy">
-            <ChevronDown className="h-4 w-4 rotate-180" />
-          </span>
-        </Button>
+          <Button
+            type="button"
+            onClick={onExpand}
+            aria-label="توسيع عزبوت"
+            aria-expanded={false}
+            className="h-10 w-10 rounded-xl bg-[#3f3f3f] p-0 text-white shadow-none hover:bg-[#333333]"
+          >
+            <ChevronDown className="h-5 w-5" />
+          </Button>
+        </div>
       )}
     </div>
   );
