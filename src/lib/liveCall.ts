@@ -23,8 +23,8 @@ interface RealtimeEvent {
 
 /**
  * Starts a true live (full-duplex) voice call over WebRTC using an ephemeral
- * Realtime session minted server-side. Throws when unsupported so the caller
- * can fall back to the speech-recognition loop.
+ * Realtime session minted server-side. Throws a controlled local error when
+ * Realtime is unavailable so the caller can fall back without a server 500.
  */
 export async function startLiveCall(
   callbacks: LiveCallCallbacks,
@@ -34,6 +34,10 @@ export async function startLiveCall(
   }
 
   const session = await foundryRealtimeSession({ data: {} });
+  if (!session.supported) {
+    throw new Error("REALTIME_UNAVAILABLE");
+  }
+
   const token = session.client_secret?.value;
   const url = session.webrtc_url;
   if (!token || !url) throw new Error("REALTIME_UNAVAILABLE");
