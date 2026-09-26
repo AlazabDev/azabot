@@ -58,6 +58,7 @@ export function VoiceCall({
     if (!open) return;
     activeRef.current = true;
     setError(null);
+    setCaption("");
     setState("connecting");
     const startedAt = Date.now();
     const timer = setInterval(
@@ -73,6 +74,7 @@ export function VoiceCall({
           onConnected: () => {
             if (!activeRef.current) return;
             setLive(true);
+            setError(null);
             setState("listening");
           },
           onSpeakingChange: (speaking) => {
@@ -95,7 +97,11 @@ export function VoiceCall({
               timestamp: Date.now(),
             }),
           onClosed: () => {
-            if (activeRef.current) setError("انتهت المكالمة المباشرة.");
+            if (!activeRef.current) return;
+            setLive(false);
+            setError(null);
+            setCaption("تم التحويل تلقائياً إلى الوضع الصوتي المتوافق مع المتصفح.");
+            startListening();
           },
         });
         if (!activeRef.current) {
@@ -114,6 +120,8 @@ export function VoiceCall({
           return;
         }
         setLive(false);
+        setError(null);
+        setCaption("تم تشغيل الوضع الصوتي المتوافق مع المتصفح.");
         startListening();
       }
     })();
@@ -135,7 +143,6 @@ export function VoiceCall({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
-
 
   const startListening = () => {
     if (!activeRef.current || mutedRef.current) return;
@@ -171,7 +178,6 @@ export function VoiceCall({
       if (!activeRef.current) return;
       if (mutedRef.current) return;
       if (!text) {
-        // Nothing captured — listen again
         startListening();
         return;
       }
@@ -300,7 +306,6 @@ export function VoiceCall({
         </div>
       </div>
 
-
       <div className="flex flex-col items-center gap-6">
         <div className="relative flex h-32 w-32 items-center justify-center rounded-full bg-white/10 backdrop-blur">
           <div
@@ -347,7 +352,6 @@ export function VoiceCall({
                       ? "الميكروفون مكتوم"
                       : "على وشك الاستماع..."}
         </div>
-
 
         {caption && (
           <div className="max-w-xs rounded-xl bg-white/10 px-3 py-2 text-center text-xs leading-relaxed backdrop-blur">
